@@ -5,13 +5,13 @@
 
 <Card>
     <CardContent>
-        <Combobox Items="_schemas" TItem="SchemaDto" Display="x => x.Name"
-                  SelectedItem="_schemas[0]" Searchable="false"
-                  Label="Use cases"
-                  OnItemSelect="o => { _editor.SetValue(o.Schema); StateHasChanged(); }"/>
-
-        <StandaloneCodeEditor Id="vtt-editor" CssClass="vtt-editor" ConstructionOptions="EditorConstructionOptions"
-                              @ref="_editor" OnDidInit="EditorInitialized"/>
+        @* <Combobox Items="_schemas" TItem="SchemaDto" Display="x => x.Name" *@
+        @*           SelectedItem="_schemas[0]" Searchable="false" *@
+        @*           Label="Use cases" *@
+        @*           OnItemSelect="o => { _editor.SetValue(o.Schema); StateHasChanged(); }"/> *@
+        @* *@
+        @* <StandaloneCodeEditor Id="vtt-editor" CssClass="vtt-editor" ConstructionOptions="EditorConstructionOptions" *@
+        @*                       @ref="_editor" OnDidInit="EditorInitialized"/> *@
     </CardContent>
 
 </Card>
