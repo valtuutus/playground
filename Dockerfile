@@ -15,6 +15,6 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "Valtuutus.Playground.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM  base AS final
-WORKDIR /var/www/web
+WORKDIR /usr/share/nginx/html
 COPY --from=publish /app/publish/wwwroot .
 COPY nginx.conf /etc/nginx/nginx.conf
