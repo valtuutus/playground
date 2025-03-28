@@ -1,0 +1,59 @@
+﻿@page "/"
+@using System.Diagnostics.CodeAnalysis
+<PageTitle>Home</PageTitle>
+
+
+<Card>
+    <CardContent>
+        <Combobox Items="_schemas" TItem="SchemaDto" Display="x => x.Name"
+                  SelectedItem="_schemas[0]" Searchable="false"
+                  Label="Use cases"
+                  OnItemSelect="o => { _editor.SetValue(o.Schema); StateHasChanged(); }"/>
+
+        <StandaloneCodeEditor Id="vtt-editor" CssClass="vtt-editor" ConstructionOptions="EditorConstructionOptions"
+                              @ref="_editor" OnDidInit="EditorInitialized"/>
+    </CardContent>
+
+</Card>
+
+
+
+@code {
+    private List<SchemaDto> _schemas;
+    [AllowNull]
+    private StandaloneCodeEditor _editor;
+    
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            Theme = "vs-dark",
+            Minimap = new EditorMinimapOptions()
+            {
+                Enabled = false
+            },
+            AutomaticLayout = true,
+            Language = "valtuutus",
+            Value = _schemas[0].Schema
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        _schemas = [new("whatever", "entity user {}")];
+        StateHasChanged();
+    }
+
+    record SchemaDto(string Name, string Schema)
+    {
+        
+    }
+    
+    protected async Task EditorInitialized(object _)
+    {
+        var model = await _editor.GetModel();
+        
+        await model.JsRuntime.InvokeVoidAsync("init_vtt");
+    }  
+
+}
