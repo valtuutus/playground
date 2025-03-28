@@ -1,4 +1,4 @@
-﻿FROM nginx:alpine AS base
+﻿FROM fholzer/nginx-brotli AS base
 EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
