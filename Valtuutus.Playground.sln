@@ -2,6 +2,12 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Valtuutus.Playground", "Valtuutus.Playground\Valtuutus.Playground.csproj", "{2F4AC6D7-EB94-4B2D-99C3-BB74E4E26A07}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFolder", "SolutionFolder", "{0DA32561-7047-4899-B33F-25A30E01B157}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+		nginx.conf = nginx.conf
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
