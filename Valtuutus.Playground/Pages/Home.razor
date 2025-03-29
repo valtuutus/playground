@@ -11,7 +11,7 @@
                   OnItemSelect="o => { _editor.SetValue(o.Schema); StateHasChanged(); }"/>
 
         <StandaloneCodeEditor Id="vtt-editor" CssClass="vtt-editor" ConstructionOptions="EditorConstructionOptions"
-                              @ref="_editor" OnDidInit="EditorInitialized"/>
+                              @ref="_editor" OnDidInit="async (a) => await EditorInitialized(a)"/>
     </CardContent>
 
 </Card>
