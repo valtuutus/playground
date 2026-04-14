@@ -76,3 +76,24 @@ window.init_vtt = () => {
     })
 
 };
+
+window.renderMermaid = async (containerId, graphDefinition) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    try {
+        const id = 'mermaid-' + Date.now();
+        const { svg } = await mermaid.render(id, graphDefinition);
+        container.innerHTML = svg;
+    } catch (e) {
+        container.innerHTML = '<p style="color:#f38ba8;font-size:12px">Graph error: ' + e.message + '</p>';
+    }
+};
+
+window.localStorage_set = (key, value) => localStorage.setItem(key, value);
+window.localStorage_get = (key) => localStorage.getItem(key);
+window.localStorage_remove = (key) => localStorage.removeItem(key);
+
+window.get_url_param = (param) => new URL(window.location.href).searchParams.get(param);
+window.set_url = (url) => history.replaceState({}, '', url);
+window.get_current_url = () => window.location.href;
+window.copy_to_clipboard = (text) => navigator.clipboard.writeText(text);
