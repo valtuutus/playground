@@ -1,37 +1,17 @@
-﻿@inherits LayoutComponentBase
-@inject Initialization InitService
-@inject ILogger<MainLayout> _logger
-<div class="page">
-    <div class="sidebar">
-        <NavMenu/>
-    </div>
+@inherits LayoutComponentBase
 
-    <main>
-        <div class="container" @onclick="InitService.HandleMainLayoutClickEvent">
-            <ErrorBoundary>
-                <ChildContent>
-                    @Body
-                </ChildContent>
-                <ErrorContent Context="ex">
-                    @{ OnError(@ex); } @*calls custom handler*@
-                    <p>@ex.Message</p> @*prints exeption on page*@
-                </ErrorContent>
-            </ErrorBoundary>
-            </div>
+<div class="playground-layout">
+    <header class="playground-header">
+        <span class="playground-title">Valtuutus Playground</span>
+        <div style="display:flex;gap:8px;align-items:center">
+            <button class="vtt-btn-outline" style="font-size:12px"
+                    onclick="document.dispatchEvent(new CustomEvent('vtt-share'))">
+                Share
+            </button>
+            <a href="https://github.com/valtuutus/valtuutus" target="_blank" class="playground-link">GitHub</a>
+        </div>
+    </header>
+    <main class="playground-main">
+        @Body
     </main>
 </div>
-
-@code
-{
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // This initializes the theme for the components.
-        // Then you can use InitService.ToggleTheme() to toggle between light and dark modes.
-        if (firstRender) await InitService.InitializeTheme();
-    }
-
-    private void OnError(Exception ex)
-    {
-        _logger.LogError(ex, "unhandled error");
-    }
-}
