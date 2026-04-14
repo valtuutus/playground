@@ -1,7 +1,7 @@
 ﻿FROM fholzer/nginx-brotli AS base
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Valtuutus.Playground/Valtuutus.Playground.csproj", "Valtuutus.Playground/"]

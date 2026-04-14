@@ -1,4 +1,4 @@
-﻿@inject Initialization init
+﻿@inject Initialization InitService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -17,8 +17,8 @@
             </NavLink>
         </div>
         <div class="flex jcsb mb1">
-            <Icon Name="@(init.CurrentTheme == "light" ? "dark_mode" : "light_mode")"
-                  OnClick="init.ToggleTheme" />
+            <Icon Name="@(InitService.CurrentTheme == "light" ? "dark_mode" : "light_mode")"
+                  OnClick="InitService.ToggleTheme" />
         </div>
     </nav>
 </div>

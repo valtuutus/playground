@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
@@ -9,16 +9,16 @@
 
     <ItemGroup>
         <PackageReference Include="BlazorMonaco" Version="3.3.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.0" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" PrivateAssets="all"/>
         <PackageReference Include="Sysinfocus.AspNetCore.Components" Version="0.0.2.7" />
-        <PackageReference Include="Valtuutus.Data.InMemory" Version="0.7.3-beta" />
+        <PackageReference Include="Valtuutus.Data.InMemory" Version="0.8.0-beta" />
     </ItemGroup>
 
     <ItemGroup>
         <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 
 </Project>
