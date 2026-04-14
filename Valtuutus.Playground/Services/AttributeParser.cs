@@ -97,19 +97,15 @@ public static class AttributeParser
 
     private static string SerializeValue(AttributeTuple tuple)
     {
-        // Try each type in detection order and serialize appropriately
-        try { return tuple.GetValue(typeof(bool))?.ToString()?.ToLowerInvariant() ?? ""; }
-        catch { }
-        try { return tuple.GetValue(typeof(int))?.ToString() ?? ""; }
-        catch { }
-        try
+        return tuple.Value.GetValueKind() switch
         {
-            var d = (decimal?)tuple.GetValue(typeof(decimal));
-            return d?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
-        }
-        catch { }
-        try { return tuple.GetValue(typeof(string))?.ToString() ?? ""; }
-        catch { }
-        return tuple.Value.ToString() ?? "";
+            System.Text.Json.JsonValueKind.True => "true",
+            System.Text.Json.JsonValueKind.False => "false",
+            System.Text.Json.JsonValueKind.Number when tuple.Value.TryGetValue<int>(out var i)
+                => i.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            System.Text.Json.JsonValueKind.Number when tuple.Value.TryGetValue<decimal>(out var d)
+                => d.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            _ => tuple.Value.GetValue<string>()
+        };
     }
 }

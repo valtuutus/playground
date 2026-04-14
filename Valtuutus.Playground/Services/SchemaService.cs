@@ -20,6 +20,7 @@ namespace Valtuutus.Playground.Services;
 public sealed class SchemaService : IDisposable
 {
     private ServiceProvider? _provider;
+    private string? _currentSchemaText;
 
     public bool IsValid => _provider is not null;
 
@@ -42,13 +43,12 @@ public sealed class SchemaService : IDisposable
         ServiceProvider? newProvider = null;
         try
         {
-            var services = new ServiceCollection();
-            services.AddValtuutusCore(schemaText).AddInMemory();
-            newProvider = services.BuildServiceProvider();
+            newProvider = BuildProvider(schemaText);
 
             // Swap out old provider
             _provider?.Dispose();
             _provider = newProvider;
+            _currentSchemaText = schemaText;
             return ValidationResult.Valid();
         }
         catch (InvalidOperationException ex)
@@ -57,6 +57,13 @@ public sealed class SchemaService : IDisposable
             var errors = ParseErrors(ex.Message);
             return ValidationResult.Invalid(errors);
         }
+    }
+
+    private static ServiceProvider BuildProvider(string schemaText)
+    {
+        var services = new ServiceCollection();
+        services.AddValtuutusCore(schemaText).AddInMemory();
+        return services.BuildServiceProvider();
     }
 
     /// <summary>
@@ -68,22 +75,12 @@ public sealed class SchemaService : IDisposable
         IEnumerable<AttributeTuple> attributes,
         CancellationToken ct = default)
     {
-        if (_provider is null)
+        if (_provider is null || _currentSchemaText is null)
             throw new InvalidOperationException("No valid schema has been set.");
 
-        // Retrieve the schema singleton to rebuild the provider with the same schema
-        var schema = _provider.GetRequiredService<Schema>();
-
-        // Rebuild provider to clear InMemory stores
-        var services = new ServiceCollection();
-        // Re-register the same schema object (avoid re-parsing)
-        services.AddSingleton(schema);
-        services.AddScoped<ICheckEngine, CheckEngine>();
-        services.AddScoped<ILookupEntityEngine, LookupEntityEngine>();
-        services.AddScoped<ILookupSubjectEngine, LookupSubjectEngine>();
-        services.AddInMemory();
-
-        var newProvider = services.BuildServiceProvider();
+        // Rebuild provider via the same path as TrySetSchema to ensure all
+        // ValtuutusOptions and AddInMemory registrations are correctly set up.
+        var newProvider = BuildProvider(_currentSchemaText);
         _provider.Dispose();
         _provider = newProvider;
 
