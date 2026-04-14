@@ -1,0 +1,354 @@
+@inject SchemaService SchemaService
+
+<div class="panel" style="height:100%; display:flex; flex-direction:column;">
+    <div class="panel-header">
+        <span>Query</span>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tabs">
+        <button class="tab @(_activeTab == Tab.Check ? "active" : "")" @onclick="() => SwitchTab(Tab.Check)">Check</button>
+        <button class="tab @(_activeTab == Tab.LookupEntity ? "active" : "")" @onclick="() => SwitchTab(Tab.LookupEntity)">LookupEntity</button>
+        <button class="tab @(_activeTab == Tab.LookupSubject ? "active" : "")" @onclick="() => SwitchTab(Tab.LookupSubject)">LookupSubject</button>
+    </div>
+
+    <div class="panel-body">
+
+        @if (_activeTab == Tab.Check)
+        {
+            <div class="section-title">Can subject do permission on entity?</div>
+            <div class="form-row">
+                <span>Can</span>
+                <select class="vtt-select" @bind="_checkSubjectType">
+                    <option value="">subject type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <span>:</span>
+                <input class="vtt-input" placeholder="subject id" @bind="_checkSubjectId" style="width:90px;" />
+                <span>do</span>
+                <select class="vtt-select" @bind="_checkPermission">
+                    <option value="">permission</option>
+                    @foreach (var p in CheckPermissions)
+                    {
+                        <option value="@p.Key">@p.Key (@p.EntityType)</option>
+                    }
+                </select>
+                <span>on</span>
+                <select class="vtt-select" @bind="_checkEntityType">
+                    <option value="">entity type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <span>:</span>
+                <input class="vtt-input" placeholder="entity id" @bind="_checkEntityId" style="width:90px;" />
+                <button class="vtt-btn" @onclick="RunCheck">Run</button>
+            </div>
+
+            @if (_checkResult.HasValue)
+            {
+                <div style="margin-top:8px;">
+                    @if (_checkResult.Value)
+                    {
+                        <span class="result-allowed">&#10003; allowed</span>
+                    }
+                    else
+                    {
+                        <span class="result-denied">&#10007; denied</span>
+                    }
+                </div>
+            }
+            @if (_checkError is not null)
+            {
+                <div class="badge-invalid" style="margin-top:6px;">@_checkError</div>
+            }
+        }
+
+        @if (_activeTab == Tab.LookupEntity)
+        {
+            <div class="section-title">Which entities can subject access?</div>
+            <div class="form-row">
+                <span>Which</span>
+                <select class="vtt-select" @bind="_leEntityType">
+                    <option value="">entity type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <span>can</span>
+                <select class="vtt-select" @bind="_leSubjectType">
+                    <option value="">subject type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <span>:</span>
+                <input class="vtt-input" placeholder="subject id" @bind="_leSubjectId" style="width:90px;" />
+                <select class="vtt-select" @bind="_lePermission">
+                    <option value="">permission</option>
+                    @foreach (var p in PermissionsForEntity(_leEntityType))
+                    {
+                        <option value="@p">@p</option>
+                    }
+                </select>
+                <span>?</span>
+                <button class="vtt-btn" @onclick="RunLookupEntity">Run</button>
+            </div>
+
+            @if (_leResults is not null)
+            {
+                <div style="margin-top:8px;">
+                    @if (_leResults.Count == 0)
+                    {
+                        <span class="result-denied">No results</span>
+                    }
+                    else
+                    {
+                        <div class="result-list">
+                            @foreach (var id in _leResults)
+                            {
+                                <div>@_leEntityType:@id</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            @if (_leError is not null)
+            {
+                <div class="badge-invalid" style="margin-top:6px;">@_leError</div>
+            }
+        }
+
+        @if (_activeTab == Tab.LookupSubject)
+        {
+            <div class="section-title">Who can do permission on entity?</div>
+            <div class="form-row">
+                <span>Who can</span>
+                <select class="vtt-select" @bind="_lsPermission">
+                    <option value="">permission</option>
+                    @foreach (var p in PermissionsForEntity(_lsEntityType))
+                    {
+                        <option value="@p">@p</option>
+                    }
+                </select>
+                <span>on</span>
+                <select class="vtt-select" @bind="_lsEntityType">
+                    <option value="">entity type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <span>:</span>
+                <input class="vtt-input" placeholder="entity id" @bind="_lsEntityId" style="width:90px;" />
+                <span>? (subject type:</span>
+                <select class="vtt-select" @bind="_lsSubjectType">
+                    <option value="">subject type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <span>)</span>
+                <button class="vtt-btn" @onclick="RunLookupSubject">Run</button>
+            </div>
+
+            @if (_lsResults is not null)
+            {
+                <div style="margin-top:8px;">
+                    @if (_lsResults.Count == 0)
+                    {
+                        <span class="result-denied">No results</span>
+                    }
+                    else
+                    {
+                        <div class="result-list">
+                            @foreach (var id in _lsResults)
+                            {
+                                <div>@_lsSubjectType:@id</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            @if (_lsError is not null)
+            {
+                <div class="badge-invalid" style="margin-top:6px;">@_lsError</div>
+            }
+        }
+
+    </div>
+</div>
+
+@code {
+    private enum Tab { Check, LookupEntity, LookupSubject }
+
+    private Tab _activeTab = Tab.Check;
+
+    // Check state
+    private string _checkEntityType = string.Empty;
+    private string _checkEntityId = string.Empty;
+    private string _checkPermission = string.Empty;
+    private string _checkSubjectType = string.Empty;
+    private string _checkSubjectId = string.Empty;
+    private bool? _checkResult;
+    private string? _checkError;
+
+    // LookupEntity state
+    private string _leEntityType = string.Empty;
+    private string _leSubjectType = string.Empty;
+    private string _leSubjectId = string.Empty;
+    private string _lePermission = string.Empty;
+    private IReadOnlyList<string>? _leResults;
+    private string? _leError;
+
+    // LookupSubject state
+    private string _lsEntityType = string.Empty;
+    private string _lsEntityId = string.Empty;
+    private string _lsPermission = string.Empty;
+    private string _lsSubjectType = string.Empty;
+    private HashSet<string>? _lsResults;
+    private string? _lsError;
+
+    private IEnumerable<string> EntityTypes =>
+        SchemaService.Schema?.Entities.Keys ?? Enumerable.Empty<string>();
+
+    // A flat list of (EntityType, PermissionKey) for Check dropdown
+    private IEnumerable<(string EntityType, string Key)> CheckPermissions
+    {
+        get
+        {
+            var schema = SchemaService.Schema;
+            if (schema is null) yield break;
+            foreach (var (et, entity) in schema.Entities)
+                foreach (var perm in entity.Permissions.Keys)
+                    yield return (et, perm);
+        }
+    }
+
+    private IEnumerable<string> PermissionsForEntity(string entityType)
+    {
+        if (string.IsNullOrEmpty(entityType)) return Enumerable.Empty<string>();
+        var schema = SchemaService.Schema;
+        if (schema is null || !schema.Entities.TryGetValue(entityType, out var entity))
+            return Enumerable.Empty<string>();
+        return entity.Permissions.Keys;
+    }
+
+    private void SwitchTab(Tab tab)
+    {
+        _activeTab = tab;
+        _checkResult = null;
+        _checkError = null;
+        _leResults = null;
+        _leError = null;
+        _lsResults = null;
+        _lsError = null;
+    }
+
+    private async Task RunCheck()
+    {
+        _checkResult = null;
+        _checkError = null;
+
+        if (!SchemaService.IsValid) { _checkError = "Schema is not valid."; return; }
+        if (string.IsNullOrEmpty(_checkEntityType) || string.IsNullOrEmpty(_checkEntityId) ||
+            string.IsNullOrEmpty(_checkPermission) || string.IsNullOrEmpty(_checkSubjectType) ||
+            string.IsNullOrEmpty(_checkSubjectId))
+        {
+            _checkError = "All fields are required.";
+            return;
+        }
+
+        // _checkPermission is stored as "permKey" — resolve entity type from schema
+        var entityType = ResolveEntityTypeForPermission(_checkPermission) ?? _checkEntityType;
+
+        try
+        {
+            var request = new CheckRequest(
+                entityType: entityType,
+                entityId: _checkEntityId,
+                permission: _checkPermission,
+                subjectType: _checkSubjectType,
+                subjectId: _checkSubjectId);
+            _checkResult = await SchemaService.CheckAsync(request);
+        }
+        catch (Exception ex)
+        {
+            _checkError = ex.Message;
+        }
+    }
+
+    private string? ResolveEntityTypeForPermission(string permission)
+    {
+        var schema = SchemaService.Schema;
+        if (schema is null) return null;
+        foreach (var (et, entity) in schema.Entities)
+            if (entity.Permissions.ContainsKey(permission))
+                return et;
+        return null;
+    }
+
+    private async Task RunLookupEntity()
+    {
+        _leResults = null;
+        _leError = null;
+
+        if (!SchemaService.IsValid) { _leError = "Schema is not valid."; return; }
+        if (string.IsNullOrEmpty(_leEntityType) || string.IsNullOrEmpty(_lePermission) ||
+            string.IsNullOrEmpty(_leSubjectType) || string.IsNullOrEmpty(_leSubjectId))
+        {
+            _leError = "All fields are required.";
+            return;
+        }
+
+        try
+        {
+            var request = new LookupEntityRequest(
+                entityType: _leEntityType,
+                permission: _lePermission,
+                subjectType: _leSubjectType,
+                subjectId: _leSubjectId);
+            var page = await SchemaService.LookupEntityAsync(request);
+            _leResults = page.EntityIds;
+        }
+        catch (Exception ex)
+        {
+            _leError = ex.Message;
+        }
+    }
+
+    private async Task RunLookupSubject()
+    {
+        _lsResults = null;
+        _lsError = null;
+
+        if (!SchemaService.IsValid) { _lsError = "Schema is not valid."; return; }
+        if (string.IsNullOrEmpty(_lsEntityType) || string.IsNullOrEmpty(_lsEntityId) ||
+            string.IsNullOrEmpty(_lsPermission) || string.IsNullOrEmpty(_lsSubjectType))
+        {
+            _lsError = "All fields are required.";
+            return;
+        }
+
+        try
+        {
+            var request = new LookupSubjectRequest(
+                entityType: _lsEntityType,
+                permission: _lsPermission,
+                subjectType: _lsSubjectType,
+                entityId: _lsEntityId);
+            _lsResults = await SchemaService.LookupSubjectAsync(request);
+        }
+        catch (Exception ex)
+        {
+            _lsError = ex.Message;
+        }
+    }
+}
