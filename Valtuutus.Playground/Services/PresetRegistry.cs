@@ -1,5 +1,7 @@
 namespace Valtuutus.Playground.Services;
 
+using Valtuutus.Playground.Models;
+
 /// <summary>
 /// A named preset that pre-populates the playground with a ready-to-use schema and seed data.
 /// </summary>
@@ -7,7 +9,8 @@ public sealed record PresetSchema(
     string Name,
     string Schema,
     string SeedTuples,
-    string SeedAttributes = "");
+    string SeedAttributes = "",
+    IReadOnlyList<Assertion>? SeedAssertions = null);
 
 /// <summary>
 /// Built-in playground presets covering common authorization patterns.
@@ -58,7 +61,18 @@ repository:linux#org@organization:linux
 repository:linux#admin@user:torvalds
 repository:linux#maintainer@user:alice
 repository:linux#reader@user:bob
-"""
+""",
+        SeedAssertions: new[]
+        {
+            new Assertion("user", "torvalds", "push", "repository", "linux", true),
+            new Assertion("user", "alice",    "push", "repository", "linux", true),
+            new Assertion("user", "bob",      "push", "repository", "linux", false),
+            new Assertion("user", "bob",      "pull", "repository", "linux", true),
+            new Assertion("user", "torvalds", "manage", "repository", "linux", true),
+            new Assertion("user", "bob",      "manage", "repository", "linux", false),
+            new Assertion("user", "torvalds", "manage_org", "organization", "linux", true),
+            new Assertion("user", "alice",    "manage_org", "organization", "linux", false),
+        }
     );
 
     // -------------------------------------------------------------------------
@@ -83,7 +97,16 @@ entity document {
 document:readme#owner@user:alice
 document:readme#editor@user:bob
 document:readme#viewer@user:charlie
-"""
+""",
+        SeedAssertions: new[]
+        {
+            new Assertion("user", "alice",   "read",  "document", "readme", true),
+            new Assertion("user", "alice",   "write", "document", "readme", true),
+            new Assertion("user", "bob",     "read",  "document", "readme", true),
+            new Assertion("user", "bob",     "write", "document", "readme", true),
+            new Assertion("user", "charlie", "read",  "document", "readme", true),
+            new Assertion("user", "charlie", "write", "document", "readme", false),
+        }
     );
 
     // -------------------------------------------------------------------------
@@ -115,7 +138,16 @@ role:viewer_role#assignee@user:charlie
 resource:api#admin@role:admin_role#assignee
 resource:api#editor@role:editor_role#assignee
 resource:api#viewer@role:viewer_role#assignee
-"""
+""",
+        SeedAssertions: new[]
+        {
+            new Assertion("user", "alice",   "read",   "resource", "api", true),
+            new Assertion("user", "alice",   "manage", "resource", "api", true),
+            new Assertion("user", "bob",     "read",   "resource", "api", true),
+            new Assertion("user", "bob",     "manage", "resource", "api", false),
+            new Assertion("user", "charlie", "read",   "resource", "api", true),
+            new Assertion("user", "charlie", "write",  "resource", "api", false),
+        }
     );
 
     // -------------------------------------------------------------------------
@@ -152,7 +184,18 @@ channel:general#member@user:bob
 channel:eng#workspace@workspace:acme
 channel:eng#owner@user:alice
 channel:eng#member@user:charlie
-"""
+""",
+        SeedAssertions: new[]
+        {
+            new Assertion("user", "alice",   "post",   "channel",   "general", true),
+            new Assertion("user", "bob",     "post",   "channel",   "general", true),
+            new Assertion("user", "charlie", "post",   "channel",   "general", false),
+            new Assertion("user", "alice",   "post",   "channel",   "eng",     true),
+            new Assertion("user", "charlie", "post",   "channel",   "eng",     true),
+            new Assertion("user", "bob",     "post",   "channel",   "eng",     false),
+            new Assertion("user", "alice",   "manage", "workspace", "acme",    true),
+            new Assertion("user", "bob",     "manage", "workspace", "acme",    false),
+        }
     );
 
     // -------------------------------------------------------------------------
@@ -183,7 +226,14 @@ home:smiths#owner@user:alice
 home:smiths#member@user:bob
 device:thermostat#home@home:smiths
 device:camera#home@home:smiths
-"""
+""",
+        SeedAssertions: new[]
+        {
+            new Assertion("user", "alice", "control", "device", "thermostat", true),
+            new Assertion("user", "bob",   "control", "device", "thermostat", false),
+            new Assertion("user", "alice", "view",    "device", "camera",     true),
+            new Assertion("user", "bob",   "view",    "device", "camera",     true),
+        }
     );
 
     // -------------------------------------------------------------------------
@@ -218,7 +268,16 @@ post:post2#author@user:alice
         SeedAttributes: """
 post:post1$is_public=true
 post:post2$is_public=false
-"""
+""",
+        SeedAssertions: new[]
+        {
+            new Assertion("user", "alice", "view", "post", "post1", true),
+            new Assertion("user", "bob",   "view", "post", "post1", true),
+            new Assertion("user", "alice", "view", "post", "post2", true),
+            new Assertion("user", "bob",   "view", "post", "post2", false),
+            new Assertion("user", "alice", "edit", "post", "post1", true),
+            new Assertion("user", "bob",   "edit", "post", "post1", false),
+        }
     );
 
     // -------------------------------------------------------------------------
