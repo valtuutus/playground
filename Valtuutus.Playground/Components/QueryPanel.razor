@@ -66,6 +66,120 @@
             {
                 <div class="badge-invalid" style="margin-top:6px;">@_checkError</div>
             }
+
+            <!-- Assertions section -->
+            <div class="section-title" style="margin-top:14px;display:flex;align-items:center;gap:8px;">
+                <span>Assertions</span>
+                @{
+                    var runCount = _assertionResults.Count(r => r.HasValue);
+                    var passCount = Assertions.Where((a, i) =>
+                        i < _assertionResults.Count && _assertionResults[i].HasValue &&
+                        _assertionResults[i]!.Value == a.Expected).Count();
+                }
+                @if (runCount > 0)
+                {
+                    <span class="@(passCount == Assertions.Count ? "badge-valid" : "badge-invalid")">
+                        @passCount / @Assertions.Count passing
+                    </span>
+                }
+                else if (Assertions.Count > 0)
+                {
+                    <span style="font-size:11px;color:#6c7086;">@Assertions.Count assertions — not run</span>
+                }
+                <button class="vtt-btn" style="margin-left:auto;padding:2px 8px;" @onclick="RunAllAssertions">▶ Run All</button>
+            </div>
+
+            @if (Assertions.Count > 0)
+            {
+                <table class="data-table" style="margin-top:4px;">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Permission</th>
+                            <th>Entity</th>
+                            <th style="text-align:center;">Expect</th>
+                            <th style="text-align:center;">Result</th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Assertions.Count; i++)
+                        {
+                            var idx = i;
+                            var a = Assertions[i];
+                            var res = idx < _assertionResults.Count ? _assertionResults[idx] : null;
+                            var isFailing = res.HasValue && res.Value != a.Expected;
+                            <tr style="@(isFailing ? "background:#2a1e2e;" : "")">
+                                <td class="entity-col">@a.SubjectType:@a.SubjectId</td>
+                                <td class="relation-col">@a.Permission</td>
+                                <td class="entity-col">@a.EntityType:@a.EntityId</td>
+                                <td style="text-align:center;color:@(a.Expected ? "#a6e3a1" : "#f38ba8");">
+                                    @(a.Expected ? "✓" : "✗")
+                                </td>
+                                <td style="text-align:center;">
+                                    @if (res is null)
+                                    {
+                                        <span style="color:#6c7086;">—</span>
+                                    }
+                                    else if (res.Value == a.Expected)
+                                    {
+                                        <span class="result-allowed">✓</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="result-denied">✗</span>
+                                    }
+                                </td>
+                                <td class="delete-col" style="color:#89b4fa;" @onclick="() => RunAssertion(idx)">▶</td>
+                                <td class="delete-col" @onclick="() => RemoveAssertion(idx)">✕</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <!-- Add assertion form -->
+            <div class="section-title" style="margin-top:10px;">Add Assertion</div>
+            <div class="form-row">
+                <select class="vtt-select" @bind="_newASubjectType">
+                    <option value="">subject type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <input class="vtt-input" placeholder="subject id" @bind="_newASubjectId" style="width:80px;" />
+                <select class="vtt-select" @bind="_newAPermission">
+                    <option value="">permission</option>
+                    @foreach (var p in CheckPermissions)
+                    {
+                        <option value="@p.Key">@p.Key (@p.EntityType)</option>
+                    }
+                </select>
+                <select class="vtt-select" @bind="_newAEntityType">
+                    <option value="">entity type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <input class="vtt-input" placeholder="entity id" @bind="_newAEntityId" style="width:80px;" />
+                <select class="vtt-select" @bind="_newAExpectedStr">
+                    <option value="allow">✓ allow</option>
+                    <option value="deny">✗ deny</option>
+                </select>
+                <button class="vtt-btn" @onclick="AddAssertion">+ Add</button>
+            </div>
+
+            <!-- Bulk paste -->
+            <div class="section-title" style="margin-top:8px;">Bulk Paste</div>
+            <textarea class="vtt-textarea" rows="3"
+                      placeholder="user:alice push repository:linux allow"
+                      @bind="_bulkAssertionText"></textarea>
+            <div style="margin-top:4px;">
+                <button class="vtt-btn-outline" @onclick="ApplyBulkAssertions">Apply</button>
+            </div>
         }
 
         @if (_activeTab == Tab.LookupEntity)
@@ -216,6 +330,24 @@
     private HashSet<string>? _lsResults;
     private string? _lsError;
 
+    // Assertions parameters
+    [Parameter] public List<Assertion> Assertions { get; set; } = new();
+    [Parameter] public EventCallback OnAssertionsChanged { get; set; }
+
+    // Assertions result state (transient, not persisted)
+    private List<bool?> _assertionResults = new();
+
+    // Assertions add-form state
+    private string _newASubjectType = string.Empty;
+    private string _newASubjectId = string.Empty;
+    private string _newAPermission = string.Empty;
+    private string _newAEntityType = string.Empty;
+    private string _newAEntityId = string.Empty;
+    private string _newAExpectedStr = "allow";
+
+    // Assertions bulk-paste state
+    private string _bulkAssertionText = string.Empty;
+
     private IEnumerable<string> EntityTypes =>
         SchemaService.Schema?.Entities.Keys ?? Enumerable.Empty<string>();
 
@@ -350,5 +482,84 @@
         {
             _lsError = ex.Message;
         }
+    }
+
+    /// <summary>
+    /// Resets all assertion results to not-run. Called by Home.razor when schema or data changes.
+    /// </summary>
+    public void ClearAssertionResults()
+    {
+        _assertionResults.Clear();
+        StateHasChanged();
+    }
+
+    private async Task RunAssertion(int index)
+    {
+        if (!SchemaService.IsValid || index < 0 || index >= Assertions.Count) return;
+
+        while (_assertionResults.Count <= index)
+            _assertionResults.Add(null);
+
+        var a = Assertions[index];
+        try
+        {
+            var result = await SchemaService.CheckAsync(new CheckRequest(
+                entityType: a.EntityType,
+                entityId: a.EntityId,
+                permission: a.Permission,
+                subjectType: a.SubjectType,
+                subjectId: a.SubjectId));
+            _assertionResults[index] = result;
+        }
+        catch
+        {
+            // leave null on error
+        }
+        StateHasChanged();
+    }
+
+    private async Task RunAllAssertions()
+    {
+        _assertionResults = new List<bool?>(Enumerable.Repeat<bool?>(null, Assertions.Count));
+        for (var i = 0; i < Assertions.Count; i++)
+            await RunAssertion(i);
+    }
+
+    private async Task RemoveAssertion(int index)
+    {
+        if (index < 0 || index >= Assertions.Count) return;
+        Assertions.RemoveAt(index);
+        if (index < _assertionResults.Count)
+            _assertionResults.RemoveAt(index);
+        await OnAssertionsChanged.InvokeAsync();
+    }
+
+    private async Task AddAssertion()
+    {
+        if (string.IsNullOrEmpty(_newASubjectType) || string.IsNullOrEmpty(_newASubjectId) ||
+            string.IsNullOrEmpty(_newAPermission) || string.IsNullOrEmpty(_newAEntityType) ||
+            string.IsNullOrEmpty(_newAEntityId))
+            return;
+
+        Assertions.Add(new Assertion(
+            SubjectType: _newASubjectType,
+            SubjectId: _newASubjectId,
+            Permission: _newAPermission,
+            EntityType: _newAEntityType,
+            EntityId: _newAEntityId,
+            Expected: _newAExpectedStr == "allow"));
+
+        _newASubjectId = string.Empty;
+        _newAEntityId = string.Empty;
+        await OnAssertionsChanged.InvokeAsync();
+    }
+
+    private async Task ApplyBulkAssertions()
+    {
+        if (string.IsNullOrWhiteSpace(_bulkAssertionText)) return;
+        var parsed = AssertionParser.ParseLines(_bulkAssertionText.Split('\n'));
+        Assertions.AddRange(parsed);
+        _bulkAssertionText = string.Empty;
+        await OnAssertionsChanged.InvokeAsync();
     }
 }
