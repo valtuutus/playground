@@ -1,59 +1,178 @@
-﻿@page "/"
-@using System.Diagnostics.CodeAnalysis
-<PageTitle>Home</PageTitle>
+@page "/"
+@inject SchemaService SchemaService
+@inject PersistenceService PersistenceService
+@inject IJSRuntime JS
+@implements IDisposable
 
+<PageTitle>Valtuutus Playground</PageTitle>
 
-<Card>
-    <CardContent>
-        <Combobox Items="_schemas" TItem="SchemaDto" Display="x => x.Name"
-                  SelectedItem="_schemas[0]" Searchable="false"
-                  Label="Use cases"
-                  OnItemSelect="o => { _editor.SetValue(o.Schema); StateHasChanged(); }"/>
+<div class="two-col">
+    <div class="left-col">
+        <div class="panel" style="flex:1.2">
+            <SchemaEditor InitialSchema="@_schemaText"
+                          OnSchemaChanged="OnSchemaChanged"
+                          OnPresetLoaded="OnPresetLoaded" />
+        </div>
+        <div class="panel" style="flex:0.8">
+            <EntityGraph @ref="_graph" />
+        </div>
+    </div>
+    <div class="right-col">
+        <div class="panel" style="flex:1">
+            <DataPanel @ref="_dataPanel"
+                       Tuples="_tuples"
+                       Attributes="_attributes"
+                       OnDataChanged="OnDataChanged" />
+        </div>
+        <div class="panel" style="flex:1">
+            <QueryPanel />
+        </div>
+    </div>
+</div>
 
-        <StandaloneCodeEditor Id="vtt-editor" CssClass="vtt-editor" ConstructionOptions="EditorConstructionOptions"
-                              @ref="_editor" OnDidInit="async (a) => await EditorInitialized(a)"/>
-    </CardContent>
-
-</Card>
-
-
+@if (_showToast)
+{
+    <div style="position:fixed;bottom:20px;right:20px;background:#a6e3a1;color:#1e1e2e;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600">
+        Link copied!
+    </div>
+}
 
 @code {
-    private List<SchemaDto> _schemas;
-    [AllowNull]
-    private StandaloneCodeEditor _editor;
-    
-    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    private string _schemaText = string.Empty;
+    private List<RelationTuple> _tuples = new();
+    private List<AttributeTuple> _attributes = new();
+
+    private EntityGraph _graph = default!;
+    private DataPanel _dataPanel = default!;
+
+    private bool _showToast;
+    private DotNetObjectReference<Home>? _selfRef;
+
+    // Static instance reference for JSInvokable static method
+    private static Home? _current;
+
+    protected override async Task OnInitializedAsync()
     {
-        return new StandaloneEditorConstructionOptions
+        var saved = await PersistenceService.LoadAsync();
+        if (saved is not null && !string.IsNullOrWhiteSpace(saved.SchemaText))
         {
-            Theme = "vs-dark",
-            Minimap = new EditorMinimapOptions()
-            {
-                Enabled = false
-            },
-            AutomaticLayout = true,
-            Language = "valtuutus",
-            Value = _schemas[0].Schema
-        };
+            _schemaText = saved.SchemaText;
+            SchemaService.TrySetSchema(_schemaText);
+
+            if (saved.Tuples?.Count > 0)
+                _tuples.AddRange(TupleParser.ParseLines(saved.Tuples));
+
+            if (saved.Attributes?.Count > 0)
+                _attributes.AddRange(AttributeParser.ParseLines(saved.Attributes));
+
+            if (SchemaService.IsValid)
+                await SchemaService.ResetDataAsync(_tuples, _attributes);
+        }
+        else
+        {
+            await LoadPreset(PresetRegistry.All[0]);
+        }
     }
 
-    protected override void OnParametersSet()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _schemas = [new("whatever", "entity user {}")];
+        if (!firstRender) return;
+
+        _current = this;
+        _selfRef = DotNetObjectReference.Create(this);
+
+        // Register listener for the vtt-share custom DOM event from Share button
+        await JS.InvokeVoidAsync("eval", """
+            (function() {
+                document.addEventListener('vtt-share', function() {
+                    DotNet.invokeMethodAsync('Valtuutus.Playground', 'ShareFromHome');
+                });
+            })();
+            """);
+
+        await _graph.Refresh();
+    }
+
+    private async Task OnSchemaChanged(string schema)
+    {
+        _schemaText = schema;
+        if (SchemaService.IsValid)
+        {
+            await SchemaService.ResetDataAsync(_tuples, _attributes);
+            await _graph.Refresh();
+        }
+        await Persist();
+    }
+
+    private async Task OnPresetLoaded(PresetSchema preset)
+    {
+        _schemaText = preset.Schema;
+        await _dataPanel.LoadPresetData(preset.SeedTuples, preset.SeedAttributes);
+        // _tuples and _attributes are updated in-place by LoadPresetData
+        if (SchemaService.IsValid)
+            await SchemaService.ResetDataAsync(_tuples, _attributes);
+        await _graph.Refresh();
+        await Persist();
+    }
+
+    private async Task OnDataChanged()
+    {
+        await SchemaService.ResetDataAsync(_tuples, _attributes);
+        await Persist();
+    }
+
+    private PlaygroundState BuildCurrentState() =>
+        new PlaygroundState
+        {
+            SchemaText = _schemaText,
+            Tuples = _tuples.Select(TupleParser.ToShorthand).ToList(),
+            Attributes = _attributes.Select(AttributeParser.ToShorthand).ToList(),
+        };
+
+    private async Task Persist()
+    {
+        await PersistenceService.SaveAsync(BuildCurrentState());
+    }
+
+    [JSInvokable("ShareFromHome")]
+    public static async Task ShareFromHome()
+    {
+        if (_current is not null)
+            await _current.ShareAsync();
+    }
+
+    private async Task ShareAsync()
+    {
+        await PersistenceService.CopyShareUrlToClipboardAsync(BuildCurrentState());
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _showToast = false;
         StateHasChanged();
     }
 
-    record SchemaDto(string Name, string Schema)
+    private async Task LoadPreset(PresetSchema preset)
     {
-        
-    }
-    
-    protected async Task EditorInitialized(object _)
-    {
-        var model = await _editor.GetModel();
-        
-        await model.JsRuntime.InvokeVoidAsync("init_vtt");
-    }  
+        _schemaText = preset.Schema;
+        SchemaService.TrySetSchema(_schemaText);
 
+        _tuples.Clear();
+        _attributes.Clear();
+
+        if (!string.IsNullOrWhiteSpace(preset.SeedTuples))
+            _tuples.AddRange(TupleParser.ParseLines(preset.SeedTuples.Split('\n')));
+
+        if (!string.IsNullOrWhiteSpace(preset.SeedAttributes))
+            _attributes.AddRange(AttributeParser.ParseLines(preset.SeedAttributes.Split('\n')));
+
+        if (SchemaService.IsValid)
+            await SchemaService.ResetDataAsync(_tuples, _attributes);
+    }
+
+    public void Dispose()
+    {
+        if (_current == this)
+            _current = null;
+        _selfRef?.Dispose();
+    }
 }
