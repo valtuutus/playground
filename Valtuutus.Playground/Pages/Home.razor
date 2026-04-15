@@ -25,7 +25,9 @@
                        OnDataChanged="OnDataChanged" />
         </div>
         <div class="panel" style="flex:1">
-            <QueryPanel />
+            <QueryPanel @ref="_queryPanel"
+                        Assertions="_assertions"
+                        OnAssertionsChanged="OnAssertionsChanged" />
         </div>
     </div>
 </div>
@@ -42,6 +44,9 @@
     private List<RelationTuple> _tuples = new();
     private List<AttributeTuple> _attributes = new();
 
+    private List<Assertion> _assertions = new();
+    private QueryPanel _queryPanel = default!;
+
     private EntityGraph _graph = default!;
     private DataPanel _dataPanel = default!;
 
@@ -54,24 +59,31 @@
     protected override async Task OnInitializedAsync()
     {
         var saved = await PersistenceService.LoadAsync();
+        var loadedFromSave = false;
+
         if (saved is not null && !string.IsNullOrWhiteSpace(saved.SchemaText))
         {
-            _schemaText = saved.SchemaText;
-            SchemaService.TrySetSchema(_schemaText);
+            var result = SchemaService.TrySetSchema(saved.SchemaText);
+            if (result.IsValid)
+            {
+                _schemaText = saved.SchemaText;
 
-            if (saved.Tuples?.Count > 0)
-                _tuples.AddRange(TupleParser.ParseLines(saved.Tuples));
+                if (saved.Tuples?.Count > 0)
+                    _tuples.AddRange(TupleParser.ParseLines(saved.Tuples));
 
-            if (saved.Attributes?.Count > 0)
-                _attributes.AddRange(AttributeParser.ParseLines(saved.Attributes));
+                if (saved.Attributes?.Count > 0)
+                    _attributes.AddRange(AttributeParser.ParseLines(saved.Attributes));
 
-            if (SchemaService.IsValid)
+                if (saved.Assertions?.Count > 0)
+                    _assertions.AddRange(AssertionParser.ParseLines(saved.Assertions));
+
                 await SchemaService.ResetDataAsync(_tuples, _attributes);
+                loadedFromSave = true;
+            }
         }
-        else
-        {
+
+        if (!loadedFromSave)
             await LoadPreset(PresetRegistry.All[0]);
-        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -101,12 +113,14 @@
             await SchemaService.ResetDataAsync(_tuples, _attributes);
             await _graph.Refresh();
         }
+        _queryPanel?.ClearAssertionResults();
         await Persist();
     }
 
     private async Task OnPresetLoaded(PresetSchema preset)
     {
         _schemaText = preset.Schema;
+        _assertions = new List<Assertion>(preset.SeedAssertions ?? Array.Empty<Assertion>());
         await _dataPanel.LoadPresetData(preset.SeedTuples, preset.SeedAttributes);
         // _tuples and _attributes are updated in-place by LoadPresetData
         if (SchemaService.IsValid)
@@ -115,9 +129,15 @@
         await Persist();
     }
 
+    private async Task OnAssertionsChanged()
+    {
+        await Persist();
+    }
+
     private async Task OnDataChanged()
     {
         await SchemaService.ResetDataAsync(_tuples, _attributes);
+        _queryPanel?.ClearAssertionResults();
         await Persist();
     }
 
@@ -127,6 +147,7 @@
             SchemaText = _schemaText,
             Tuples = _tuples.Select(TupleParser.ToShorthand).ToList(),
             Attributes = _attributes.Select(AttributeParser.ToShorthand).ToList(),
+            Assertions = _assertions.Select(AssertionParser.ToShorthand).ToList(),
         };
 
     private async Task Persist()
@@ -154,6 +175,7 @@
     private async Task LoadPreset(PresetSchema preset)
     {
         _schemaText = preset.Schema;
+        _assertions = new List<Assertion>(preset.SeedAssertions ?? Array.Empty<Assertion>());
         SchemaService.TrySetSchema(_schemaText);
 
         _tuples.Clear();
