@@ -11,19 +11,33 @@ public static class MermaidGenerator
 {
     /// <summary>
     /// Generates a Mermaid flowchart string for the given schema.
+    /// Entity types are rectangular nodes; attributes appear as stadium-shaped nodes
+    /// attached to their entity with a dashed edge showing the attribute type.
     /// </summary>
     public static string Generate(Schema schema)
     {
         var sb = new StringBuilder();
         sb.AppendLine("flowchart LR");
 
-        // Collect all entity type nodes
+        // Entity type nodes
         foreach (var entityType in schema.Entities.Keys)
         {
             sb.AppendLine($"    {SanitizeId(entityType)}[\"{entityType}\"]");
         }
 
-        // Emit edges for each relation
+        // Attribute nodes (stadium shape) + dashed edges from their entity
+        foreach (var (entityType, entity) in schema.Entities)
+        {
+            foreach (var (attrName, attr) in entity.Attributes)
+            {
+                var attrNodeId = $"{SanitizeId(entityType)}_attr_{SanitizeId(attrName)}";
+                var typeName = FriendlyTypeName(attr.Type);
+                sb.AppendLine($"    {attrNodeId}([\"{attrName}: {typeName}\"])");
+                sb.AppendLine($"    {SanitizeId(entityType)} -.-> {attrNodeId}");
+            }
+        }
+
+        // Relation edges
         foreach (var (entityType, entity) in schema.Entities)
         {
             foreach (var (relationName, relation) in entity.Relations)
@@ -41,6 +55,17 @@ public static class MermaidGenerator
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    private static string FriendlyTypeName(Type type)
+    {
+        if (type == typeof(string))  return "string";
+        if (type == typeof(int))     return "int";
+        if (type == typeof(long))    return "long";
+        if (type == typeof(bool))    return "bool";
+        if (type == typeof(decimal)) return "decimal";
+        if (type == typeof(double))  return "double";
+        return type.Name;
     }
 
     private static string SanitizeId(string name)

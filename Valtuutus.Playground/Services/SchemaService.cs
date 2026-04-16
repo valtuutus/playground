@@ -21,6 +21,7 @@ public sealed class SchemaService : IDisposable
 {
     private ServiceProvider? _provider;
     private string? _currentSchemaText;
+    private SnapToken? _latestSnapToken;
 
     public bool IsValid => _provider is not null;
 
@@ -49,6 +50,7 @@ public sealed class SchemaService : IDisposable
             _provider?.Dispose();
             _provider = newProvider;
             _currentSchemaText = schemaText;
+            _latestSnapToken = null;
             return ValidationResult.Valid();
         }
         catch (InvalidOperationException ex)
@@ -75,52 +77,56 @@ public sealed class SchemaService : IDisposable
         IEnumerable<AttributeTuple> attributes,
         CancellationToken ct = default)
     {
-        if (_provider is null || _currentSchemaText is null)
+        if (_currentSchemaText is null)
             throw new InvalidOperationException("No valid schema has been set.");
 
-        // Rebuild provider via the same path as TrySetSchema to ensure all
-        // ValtuutusOptions and AddInMemory registrations are correctly set up.
+        // Build and seed a fresh provider BEFORE swapping _provider, so a
+        // concurrent call that disposes _provider mid-await cannot touch the
+        // ReaderWriterLockSlim we're still writing into.
         var newProvider = BuildProvider(_currentSchemaText);
-        _provider.Dispose();
-        _provider = newProvider;
 
-        // Write seed data
-        using var scope = _provider.CreateScope();
+        using var scope = newProvider.CreateScope();
         var writer = scope.ServiceProvider.GetRequiredService<IDataWriterProvider>();
-        await writer.Write(tuples, attributes, ct);
+        var snapToken = await writer.Write(tuples, attributes, ct);
+
+        // Swap only after the write completes.
+        var oldProvider = _provider;
+        _provider = newProvider;
+        _latestSnapToken = snapToken;
+        oldProvider?.Dispose();
     }
 
     /// <summary>
-    /// Evaluates a permission check using a fresh scope and <see cref="SnapToken.MinValue"/>.
+    /// Evaluates a permission check against the latest seeded data snapshot.
     /// </summary>
     public async Task<bool> CheckAsync(CheckRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = SnapToken.MinValue;
+        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ICheckEngine>();
         return await engine.Check(request, ct);
     }
 
     /// <summary>
-    /// Looks up entities using a fresh scope and <see cref="SnapToken.MinValue"/>.
+    /// Looks up entities against the latest seeded data snapshot.
     /// </summary>
     public async Task<LookupEntityPage> LookupEntityAsync(LookupEntityRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = SnapToken.MinValue;
+        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ILookupEntityEngine>();
         return await engine.LookupEntity(request, ct);
     }
 
     /// <summary>
-    /// Looks up subjects using a fresh scope and <see cref="SnapToken.MinValue"/>.
+    /// Looks up subjects against the latest seeded data snapshot.
     /// </summary>
     public async Task<HashSet<string>> LookupSubjectAsync(LookupSubjectRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = SnapToken.MinValue;
+        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ILookupSubjectEngine>();
         return await engine.Lookup(request, ct);

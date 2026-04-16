@@ -16,59 +16,8 @@
 
         @if (_activeTab == Tab.Check)
         {
-            <div class="section-title">Can subject do permission on entity?</div>
-            <div class="form-row">
-                <span>Can</span>
-                <select class="vtt-select" @bind="_checkSubjectType">
-                    <option value="">subject type</option>
-                    @foreach (var et in EntityTypes)
-                    {
-                        <option value="@et">@et</option>
-                    }
-                </select>
-                <span>:</span>
-                <input class="vtt-input" placeholder="subject id" @bind="_checkSubjectId" style="width:90px;" />
-                <span>do</span>
-                <select class="vtt-select" @bind="_checkPermission">
-                    <option value="">permission</option>
-                    @foreach (var p in CheckPermissions)
-                    {
-                        <option value="@p.Key">@p.Key (@p.EntityType)</option>
-                    }
-                </select>
-                <span>on</span>
-                <select class="vtt-select" @bind="_checkEntityType">
-                    <option value="">entity type</option>
-                    @foreach (var et in EntityTypes)
-                    {
-                        <option value="@et">@et</option>
-                    }
-                </select>
-                <span>:</span>
-                <input class="vtt-input" placeholder="entity id" @bind="_checkEntityId" style="width:90px;" />
-                <button class="vtt-btn" @onclick="RunCheck">Run</button>
-            </div>
-
-            @if (_checkResult.HasValue)
-            {
-                <div style="margin-top:8px;">
-                    @if (_checkResult.Value)
-                    {
-                        <span class="result-allowed">&#10003; allowed</span>
-                    }
-                    else
-                    {
-                        <span class="result-denied">&#10007; denied</span>
-                    }
-                </div>
-            }
-            @if (_checkError is not null)
-            {
-                <div class="badge-invalid" style="margin-top:6px;">@_checkError</div>
-            }
-
             <!-- Assertions section -->
-            <div class="section-title" style="margin-top:14px;display:flex;align-items:center;gap:8px;">
+            <div class="section-title" style="display:flex;align-items:center;gap:8px;">
                 <span>Assertions</span>
                 @{
                     var runCount = _assertionResults.Count(r => r.HasValue);
@@ -122,13 +71,13 @@
                                     {
                                         <span style="color:#6c7086;">—</span>
                                     }
-                                    else if (res.Value == a.Expected)
+                                    else if (res.Value)
                                     {
-                                        <span class="result-allowed">✓</span>
+                                        <span class="result-allowed">✓ allow</span>
                                     }
                                     else
                                     {
-                                        <span class="result-denied">✗</span>
+                                        <span class="result-denied">✗ deny</span>
                                     }
                                 </td>
                                 <td class="delete-col" style="color:#89b4fa;" @onclick="() => RunAssertion(idx)">▶</td>
@@ -150,18 +99,11 @@
                     }
                 </select>
                 <input class="vtt-input" placeholder="subject id" @bind="_newASubjectId" style="width:80px;" />
-                <select class="vtt-select" @bind="_newAPermission">
-                    <option value="">permission</option>
-                    @foreach (var p in CheckPermissions)
+                <select class="vtt-select" value="@_newAKey" @onchange="OnNewAKeyChanged">
+                    <option value="">permission / relation</option>
+                    @foreach (var p in CheckTargets)
                     {
-                        <option value="@p.Key">@p.Key (@p.EntityType)</option>
-                    }
-                </select>
-                <select class="vtt-select" @bind="_newAEntityType">
-                    <option value="">entity type</option>
-                    @foreach (var et in EntityTypes)
-                    {
-                        <option value="@et">@et</option>
+                        <option value="@(p.EntityType + "|" + p.Key)">@p.Key (@p.EntityType)</option>
                     }
                 </select>
                 <input class="vtt-input" placeholder="entity id" @bind="_newAEntityId" style="width:80px;" />
@@ -187,11 +129,11 @@
             <div class="section-title">Which entities can subject access?</div>
             <div class="form-row">
                 <span>Which</span>
-                <select class="vtt-select" @bind="_leEntityType">
-                    <option value="">entity type</option>
-                    @foreach (var et in EntityTypes)
+                <select class="vtt-select" value="@_leKey" @onchange="OnLeKeyChanged">
+                    <option value="">permission</option>
+                    @foreach (var p in CheckTargets)
                     {
-                        <option value="@et">@et</option>
+                        <option value="@(p.EntityType + "|" + p.Key)">@p.Key (@p.EntityType)</option>
                     }
                 </select>
                 <span>can</span>
@@ -204,13 +146,6 @@
                 </select>
                 <span>:</span>
                 <input class="vtt-input" placeholder="subject id" @bind="_leSubjectId" style="width:90px;" />
-                <select class="vtt-select" @bind="_lePermission">
-                    <option value="">permission</option>
-                    @foreach (var p in PermissionsForEntity(_leEntityType))
-                    {
-                        <option value="@p">@p</option>
-                    }
-                </select>
                 <span>?</span>
                 <button class="vtt-btn" @onclick="RunLookupEntity">Run</button>
             </div>
@@ -244,22 +179,14 @@
             <div class="section-title">Who can do permission on entity?</div>
             <div class="form-row">
                 <span>Who can</span>
-                <select class="vtt-select" @bind="_lsPermission">
+                <select class="vtt-select" value="@_lsKey" @onchange="OnLsKeyChanged">
                     <option value="">permission</option>
-                    @foreach (var p in PermissionsForEntity(_lsEntityType))
+                    @foreach (var p in CheckTargets)
                     {
-                        <option value="@p">@p</option>
+                        <option value="@(p.EntityType + "|" + p.Key)">@p.Key (@p.EntityType)</option>
                     }
                 </select>
                 <span>on</span>
-                <select class="vtt-select" @bind="_lsEntityType">
-                    <option value="">entity type</option>
-                    @foreach (var et in EntityTypes)
-                    {
-                        <option value="@et">@et</option>
-                    }
-                </select>
-                <span>:</span>
                 <input class="vtt-input" placeholder="entity id" @bind="_lsEntityId" style="width:90px;" />
                 <span>? (subject type:</span>
                 <select class="vtt-select" @bind="_lsSubjectType">
@@ -305,15 +232,6 @@
 
     private Tab _activeTab = Tab.Check;
 
-    // Check state
-    private string _checkEntityType = string.Empty;
-    private string _checkEntityId = string.Empty;
-    private string _checkPermission = string.Empty;
-    private string _checkSubjectType = string.Empty;
-    private string _checkSubjectId = string.Empty;
-    private bool? _checkResult;
-    private string? _checkError;
-
     // LookupEntity state
     private string _leEntityType = string.Empty;
     private string _leSubjectType = string.Empty;
@@ -340,6 +258,7 @@
     // Assertions add-form state
     private string _newASubjectType = string.Empty;
     private string _newASubjectId = string.Empty;
+    private string _newAKey = string.Empty;        // "entityType|permission"
     private string _newAPermission = string.Empty;
     private string _newAEntityType = string.Empty;
     private string _newAEntityId = string.Empty;
@@ -348,83 +267,66 @@
     // Assertions bulk-paste state
     private string _bulkAssertionText = string.Empty;
 
+    // LookupEntity unified key state
+    private string _leKey = string.Empty;          // "entityType|permission"
+
+    // LookupSubject unified key state
+    private string _lsKey = string.Empty;          // "entityType|permission"
+
     private IEnumerable<string> EntityTypes =>
         SchemaService.Schema?.Entities.Keys ?? Enumerable.Empty<string>();
 
-    // A flat list of (EntityType, PermissionKey) for Check dropdown
-    private IEnumerable<(string EntityType, string Key)> CheckPermissions
+    // Flat list of (EntityType, Key) covering both permissions and relations for Check/Lookup dropdowns.
+    private IEnumerable<(string EntityType, string Key)> CheckTargets
     {
         get
         {
             var schema = SchemaService.Schema;
             if (schema is null) yield break;
             foreach (var (et, entity) in schema.Entities)
+            {
                 foreach (var perm in entity.Permissions.Keys)
                     yield return (et, perm);
+                foreach (var rel in entity.Relations.Keys)
+                    yield return (et, rel);
+            }
         }
     }
 
-    private IEnumerable<string> PermissionsForEntity(string entityType)
+    private void OnNewAKeyChanged(ChangeEventArgs e)
     {
-        if (string.IsNullOrEmpty(entityType)) return Enumerable.Empty<string>();
-        var schema = SchemaService.Schema;
-        if (schema is null || !schema.Entities.TryGetValue(entityType, out var entity))
-            return Enumerable.Empty<string>();
-        return entity.Permissions.Keys;
+        _newAKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _newAKey.IndexOf('|');
+        if (sep < 0) { _newAEntityType = _newAPermission = string.Empty; return; }
+        _newAEntityType = _newAKey[..sep];
+        _newAPermission = _newAKey[(sep + 1)..];
+    }
+
+    private void OnLeKeyChanged(ChangeEventArgs e)
+    {
+        _leKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _leKey.IndexOf('|');
+        if (sep < 0) { _leEntityType = _lePermission = string.Empty; return; }
+        _leEntityType = _leKey[..sep];
+        _lePermission = _leKey[(sep + 1)..];
+    }
+
+    private void OnLsKeyChanged(ChangeEventArgs e)
+    {
+        _lsKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _lsKey.IndexOf('|');
+        if (sep < 0) { _lsEntityType = _lsPermission = string.Empty; return; }
+        _lsEntityType = _lsKey[..sep];
+        _lsPermission = _lsKey[(sep + 1)..];
     }
 
     private void SwitchTab(Tab tab)
     {
         _activeTab = tab;
-        _checkResult = null;
-        _checkError = null;
         _leResults = null;
         _leError = null;
         _lsResults = null;
         _lsError = null;
-    }
-
-    private async Task RunCheck()
-    {
-        _checkResult = null;
-        _checkError = null;
-
-        if (!SchemaService.IsValid) { _checkError = "Schema is not valid."; return; }
-        if (string.IsNullOrEmpty(_checkEntityType) || string.IsNullOrEmpty(_checkEntityId) ||
-            string.IsNullOrEmpty(_checkPermission) || string.IsNullOrEmpty(_checkSubjectType) ||
-            string.IsNullOrEmpty(_checkSubjectId))
-        {
-            _checkError = "All fields are required.";
-            return;
-        }
-
-        // _checkPermission is stored as "permKey" — resolve entity type from schema
-        var entityType = ResolveEntityTypeForPermission(_checkPermission) ?? _checkEntityType;
-
-        try
-        {
-            var request = new CheckRequest(
-                entityType: entityType,
-                entityId: _checkEntityId,
-                permission: _checkPermission,
-                subjectType: _checkSubjectType,
-                subjectId: _checkSubjectId);
-            _checkResult = await SchemaService.CheckAsync(request);
-        }
-        catch (Exception ex)
-        {
-            _checkError = ex.Message;
-        }
-    }
-
-    private string? ResolveEntityTypeForPermission(string permission)
-    {
-        var schema = SchemaService.Schema;
-        if (schema is null) return null;
-        foreach (var (et, entity) in schema.Entities)
-            if (entity.Permissions.ContainsKey(permission))
-                return et;
-        return null;
     }
 
     private async Task RunLookupEntity()
@@ -520,9 +422,28 @@
 
     private async Task RunAllAssertions()
     {
-        _assertionResults = new List<bool?>(Enumerable.Repeat<bool?>(null, Assertions.Count));
-        for (var i = 0; i < Assertions.Count; i++)
-            await RunAssertion(i);
+        if (!SchemaService.IsValid) return;
+        var count = Assertions.Count;
+        var results = new List<bool?>(Enumerable.Repeat<bool?>(null, count));
+        for (var i = 0; i < count; i++)
+        {
+            var a = Assertions[i];
+            try
+            {
+                results[i] = await SchemaService.CheckAsync(new CheckRequest(
+                    entityType: a.EntityType,
+                    entityId: a.EntityId,
+                    permission: a.Permission,
+                    subjectType: a.SubjectType,
+                    subjectId: a.SubjectId));
+            }
+            catch
+            {
+                // leave null on error
+            }
+        }
+        _assertionResults = results;
+        StateHasChanged();
     }
 
     private async Task RemoveAssertion(int index)
@@ -550,6 +471,9 @@
             Expected: _newAExpectedStr == "allow"));
 
         _newASubjectId = string.Empty;
+        _newAKey = string.Empty;
+        _newAPermission = string.Empty;
+        _newAEntityType = string.Empty;
         _newAEntityId = string.Empty;
         await OnAssertionsChanged.InvokeAsync();
     }

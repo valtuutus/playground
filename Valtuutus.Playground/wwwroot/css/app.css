@@ -1,5 +1,27 @@
 *, *::before, *::after { box-sizing: border-box; }
 
+#blazor-error-ui {
+    display: none;
+    background: #313244;
+    border-top: 1px solid #f38ba8;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0,0,0,.3);
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    color: #f38ba8;
+    font-size: 13px;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
 html, body {
     height: 100%;
     margin: 0;

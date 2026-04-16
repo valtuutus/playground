@@ -5,7 +5,7 @@
     <div class="panel-header">
         <span>Schema</span>
 
-        <select class="vtt-select" @onchange="OnPresetChanged">
+        <select class="vtt-select" value="@ActivePresetName" @onchange="OnPresetChanged">
             <option value="">-- preset --</option>
             @foreach (var p in PresetRegistry.All)
             {
@@ -37,8 +37,11 @@
 
 @code {
     [Parameter] public string InitialSchema { get; set; } = string.Empty;
+    [Parameter] public string ActivePresetName { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> OnSchemaChanged { get; set; }
     [Parameter] public EventCallback<PresetSchema> OnPresetLoaded { get; set; }
+    /// <summary>Fires once when the Monaco instance is ready to accept SetValue calls.</summary>
+    [Parameter] public EventCallback OnEditorReady { get; set; }
 
     private StandaloneCodeEditor _editor = default!;
     private ValidationResult? _validation;
@@ -48,19 +51,17 @@
         {
             Language = "valtuutus",
             Theme = "vs-dark",
-            Value = InitialSchema,
+            Value = string.Empty,   // always start empty; Home.razor pushes the real value via OnEditorReady
             Minimap = new EditorMinimapOptions { Enabled = false },
             AutomaticLayout = true,
         };
 
     private async Task OnEditorInit()
     {
-        // Set up syntax highlighting
         await JS.InvokeVoidAsync("init_vtt");
-
-        // Fire initial schema change so callers get the initial text
-        var text = await _editor.GetValue();
-        await ApplySchema(text);
+        // Notify Home.razor that Monaco is ready; it will call SetValueAsync with the
+        // correct schema regardless of whether its own async init has already finished.
+        await OnEditorReady.InvokeAsync();
     }
 
     private async Task OnContentChanged(ModelContentChangedEvent _)

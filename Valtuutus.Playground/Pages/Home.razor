@@ -9,9 +9,11 @@
 <div class="two-col">
     <div class="left-col">
         <div class="panel" style="flex:1.2">
-            <SchemaEditor InitialSchema="@_schemaText"
+            <SchemaEditor @ref="_schemaEditor"
+                          ActivePresetName="@_activePresetName"
                           OnSchemaChanged="OnSchemaChanged"
-                          OnPresetLoaded="OnPresetLoaded" />
+                          OnPresetLoaded="OnPresetLoaded"
+                          OnEditorReady="OnEditorReady" />
         </div>
         <div class="panel" style="flex:0.8">
             <EntityGraph @ref="_graph" />
@@ -41,6 +43,7 @@
 
 @code {
     private string _schemaText = string.Empty;
+    private string _activePresetName = string.Empty;
     private List<RelationTuple> _tuples = new();
     private List<AttributeTuple> _attributes = new();
 
@@ -49,6 +52,12 @@
 
     private EntityGraph _graph = default!;
     private DataPanel _dataPanel = default!;
+    private SchemaEditor _schemaEditor = default!;
+
+    // Tracks whether both sides are ready to sync:
+    // _schemaText is set by async init, _editorMonacoReady by Monaco's OnEditorReady callback.
+    private bool _editorMonacoReady;
+    private bool _asyncInitDone;
 
     private bool _showToast;
     private DotNetObjectReference<Home>? _selfRef;
@@ -78,12 +87,18 @@
                     _assertions.AddRange(AssertionParser.ParseLines(saved.Assertions));
 
                 await SchemaService.ResetDataAsync(_tuples, _attributes);
+                _activePresetName = PresetRegistry.All.FirstOrDefault(p => p.Schema == _schemaText)?.Name ?? string.Empty;
                 loadedFromSave = true;
             }
         }
 
         if (!loadedFromSave)
             await LoadPreset(PresetRegistry.All[0]);
+
+        _asyncInitDone = true;
+        // If Monaco is already ready (fired before our async finished), push the schema now.
+        if (_editorMonacoReady)
+            await SyncSchemaToEditorAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -105,9 +120,25 @@
         await _graph.Refresh();
     }
 
+    private async Task OnEditorReady()
+    {
+        _editorMonacoReady = true;
+        // If async init already completed (stored _schemaText), push it into Monaco now.
+        if (_asyncInitDone)
+            await SyncSchemaToEditorAsync();
+    }
+
+    private async Task SyncSchemaToEditorAsync()
+    {
+        if (string.IsNullOrEmpty(_schemaText)) return;
+        await _schemaEditor.SetValueAsync(_schemaText);
+        await _graph.Refresh();
+    }
+
     private async Task OnSchemaChanged(string schema)
     {
         _schemaText = schema;
+        _activePresetName = PresetRegistry.All.FirstOrDefault(p => p.Schema == schema)?.Name ?? string.Empty;
         if (SchemaService.IsValid)
         {
             await SchemaService.ResetDataAsync(_tuples, _attributes);
@@ -119,6 +150,7 @@
 
     private async Task OnPresetLoaded(PresetSchema preset)
     {
+        _activePresetName = preset.Name;
         _schemaText = preset.Schema;
         _assertions = new List<Assertion>(preset.SeedAssertions ?? Array.Empty<Assertion>());
         await _dataPanel.LoadPresetData(preset.SeedTuples, preset.SeedAttributes);
@@ -174,6 +206,7 @@
 
     private async Task LoadPreset(PresetSchema preset)
     {
+        _activePresetName = preset.Name;
         _schemaText = preset.Schema;
         _assertions = new List<Assertion>(preset.SeedAssertions ?? Array.Empty<Assertion>());
         SchemaService.TrySetSchema(_schemaText);

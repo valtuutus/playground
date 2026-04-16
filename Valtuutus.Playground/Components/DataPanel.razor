@@ -17,21 +17,14 @@
             <!-- Add form -->
             <div class="section-title">Add Tuple</div>
             <div class="form-row">
-                <select class="vtt-select" @bind="_newTupleEntityType" @bind:after="OnTupleEntityTypeChanged">
-                    <option value="">entity type</option>
-                    @foreach (var et in EntityTypes)
+                <select class="vtt-select" value="@_newTupleKey" @onchange="OnTupleKeyChanged">
+                    <option value="">relation</option>
+                    @foreach (var (et, rel) in AllTupleRelations)
                     {
-                        <option value="@et">@et</option>
+                        <option value="@(et + "|" + rel)">@rel (@et)</option>
                     }
                 </select>
                 <input class="vtt-input" placeholder="entity id" @bind="_newTupleEntityId" />
-                <select class="vtt-select" @bind="_newTupleRelation">
-                    <option value="">relation</option>
-                    @foreach (var r in TupleRelationsForSelectedEntity)
-                    {
-                        <option value="@r">@r</option>
-                    }
-                </select>
                 <select class="vtt-select" @bind="_newTupleSubjectType">
                     <option value="">subject type</option>
                     @foreach (var et in EntityTypes)
@@ -84,21 +77,14 @@
             <!-- Add form -->
             <div class="section-title">Add Attribute</div>
             <div class="form-row">
-                <select class="vtt-select" @bind="_newAttrEntityType" @bind:after="OnAttrEntityTypeChanged">
-                    <option value="">entity type</option>
-                    @foreach (var et in EntityTypes)
+                <select class="vtt-select" value="@_newAttrKey" @onchange="OnAttrKeyChanged">
+                    <option value="">attribute</option>
+                    @foreach (var (et, attr) in AllAttributes)
                     {
-                        <option value="@et">@et</option>
+                        <option value="@(et + "|" + attr)">@attr (@et)</option>
                     }
                 </select>
                 <input class="vtt-input" placeholder="entity id" @bind="_newAttrEntityId" />
-                <select class="vtt-select" @bind="_newAttrName">
-                    <option value="">attribute</option>
-                    @foreach (var a in AttributesForSelectedEntity)
-                    {
-                        <option value="@a">@a</option>
-                    }
-                </select>
                 <input class="vtt-input" placeholder="value" @bind="_newAttrValue" />
                 <button class="vtt-btn" @onclick="AddAttribute">+ Add</button>
             </div>
@@ -152,58 +138,67 @@
     private Tab _activeTab = Tab.Tuples;
 
     // Tuple add-form state
+    private string _newTupleKey = string.Empty;       // "entityType|relation"
     private string _newTupleEntityType = string.Empty;
-    private string _newTupleEntityId = string.Empty;
     private string _newTupleRelation = string.Empty;
+    private string _newTupleEntityId = string.Empty;
     private string _newTupleSubjectType = string.Empty;
     private string _newTupleSubjectId = string.Empty;
 
     // Attribute add-form state
+    private string _newAttrKey = string.Empty;        // "entityType|attribute"
     private string _newAttrEntityType = string.Empty;
-    private string _newAttrEntityId = string.Empty;
     private string _newAttrName = string.Empty;
+    private string _newAttrEntityId = string.Empty;
     private string _newAttrValue = string.Empty;
 
     // Bulk paste state
     private string _bulkTupleText = string.Empty;
     private string _bulkAttrText = string.Empty;
 
-    // Derived lists from schema
     private IEnumerable<string> EntityTypes =>
         SchemaService.Schema?.Entities.Keys ?? Enumerable.Empty<string>();
 
-    private IEnumerable<string> TupleRelationsForSelectedEntity
+    private IEnumerable<(string EntityType, string Relation)> AllTupleRelations
     {
         get
         {
-            if (string.IsNullOrEmpty(_newTupleEntityType)) return Enumerable.Empty<string>();
             var schema = SchemaService.Schema;
-            if (schema is null || !schema.Entities.TryGetValue(_newTupleEntityType, out var entity))
-                return Enumerable.Empty<string>();
-            return entity.Relations.Keys;
+            if (schema is null) yield break;
+            foreach (var (et, entity) in schema.Entities)
+                foreach (var rel in entity.Relations.Keys)
+                    yield return (et, rel);
         }
     }
 
-    private IEnumerable<string> AttributesForSelectedEntity
+    private IEnumerable<(string EntityType, string Attribute)> AllAttributes
     {
         get
         {
-            if (string.IsNullOrEmpty(_newAttrEntityType)) return Enumerable.Empty<string>();
             var schema = SchemaService.Schema;
-            if (schema is null || !schema.Entities.TryGetValue(_newAttrEntityType, out var entity))
-                return Enumerable.Empty<string>();
-            return entity.Attributes.Keys;
+            if (schema is null) yield break;
+            foreach (var (et, entity) in schema.Entities)
+                foreach (var attr in entity.Attributes.Keys)
+                    yield return (et, attr);
         }
     }
 
-    private void OnTupleEntityTypeChanged()
+    private void OnTupleKeyChanged(ChangeEventArgs e)
     {
-        _newTupleRelation = string.Empty;
+        _newTupleKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _newTupleKey.IndexOf('|');
+        if (sep < 0) { _newTupleEntityType = _newTupleRelation = string.Empty; return; }
+        _newTupleEntityType = _newTupleKey[..sep];
+        _newTupleRelation = _newTupleKey[(sep + 1)..];
     }
 
-    private void OnAttrEntityTypeChanged()
+    private void OnAttrKeyChanged(ChangeEventArgs e)
     {
-        _newAttrName = string.Empty;
+        _newAttrKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _newAttrKey.IndexOf('|');
+        if (sep < 0) { _newAttrEntityType = _newAttrName = string.Empty; return; }
+        _newAttrEntityType = _newAttrKey[..sep];
+        _newAttrName = _newAttrKey[(sep + 1)..];
     }
 
     private async Task AddTuple()
@@ -217,6 +212,9 @@
         if (TupleParser.TryParse(shorthand, out var tuple))
         {
             Tuples.Add(tuple.Value);
+            _newTupleKey = string.Empty;
+            _newTupleEntityType = string.Empty;
+            _newTupleRelation = string.Empty;
             _newTupleEntityId = string.Empty;
             _newTupleSubjectId = string.Empty;
             await OnDataChanged.InvokeAsync();
@@ -248,6 +246,9 @@
         if (AttributeParser.TryParse(shorthand, out var attr))
         {
             Attributes.Add(attr);
+            _newAttrKey = string.Empty;
+            _newAttrEntityType = string.Empty;
+            _newAttrName = string.Empty;
             _newAttrEntityId = string.Empty;
             _newAttrValue = string.Empty;
             await OnDataChanged.InvokeAsync();
