@@ -26,7 +26,7 @@ The playground lets you write a Valtuutus schema, seed relation and attribute da
 | Layer | Technology |
 |---|---|
 | Framework | Blazor WebAssembly (.NET 10) |
-| Authorization engine | [Valtuutus.Data.InMemory](https://www.nuget.org/packages/Valtuutus.Data.InMemory) 0.8.0-beta |
+| Authorization engine | [Valtuutus.Data.InMemory](https://www.nuget.org/packages/Valtuutus.Data.InMemory) |
 | Schema editor | Monaco Editor via [BlazorMonaco](https://github.com/serdarciplak/BlazorMonaco) |
 | Entity graph | [Cytoscape.js](https://cytoscape.org/) + [cytoscape-elk](https://github.com/cytoscape/cytoscape.js-elk) (ELK layered layout) |
 | Tests | xUnit + bUnit |
