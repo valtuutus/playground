@@ -17,75 +17,64 @@
         @if (_activeTab == Tab.Check)
         {
             <!-- Assertions section -->
-            <div class="section-title" style="display:flex;align-items:center;gap:8px;">
+            <div class="section-title" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                 <span>Assertions</span>
-                @{
-                    var runCount = _assertionResults.Count(r => r.HasValue);
-                    var passCount = Assertions.Where((a, i) =>
-                        i < _assertionResults.Count && _assertionResults[i].HasValue &&
-                        _assertionResults[i]!.Value == a.Expected).Count();
-                }
-                @if (runCount > 0 && Assertions.Count > 0)
-                {
-                    <span class="@(passCount == Assertions.Count ? "badge-valid" : "badge-invalid")">
-                        @passCount / @Assertions.Count passing
-                    </span>
-                }
-                else if (Assertions.Count > 0)
-                {
-                    <span style="font-size:11px;color:#6c7086;">@Assertions.Count assertions — not run</span>
-                }
-                <button class="vtt-btn" style="margin-left:auto;padding:2px 8px;" @onclick="RunAllAssertions">▶ Run All</button>
+                <button class="vtt-btn" style="margin-left:auto;padding:2px 8px;" @onclick="RunAllAssertions">&#9654; Run All</button>
             </div>
 
             @if (Assertions.Count > 0)
             {
-                <table class="data-table" style="margin-top:4px;">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Permission</th>
-                            <th>Entity</th>
-                            <th style="text-align:center;">Expect</th>
-                            <th style="text-align:center;">Result</th>
-                            <th></th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < Assertions.Count; i++)
-                        {
-                            var idx = i;
-                            var a = Assertions[i];
-                            var res = idx < _assertionResults.Count ? _assertionResults[idx] : null;
-                            var isFailing = res.HasValue && res.Value != a.Expected;
-                            <tr style="@(isFailing ? "background:#2a1e2e;" : "")">
-                                <td class="entity-col">@a.SubjectType:@a.SubjectId</td>
-                                <td class="relation-col">@a.Permission</td>
-                                <td class="entity-col">@a.EntityType:@a.EntityId</td>
-                                <td style="text-align:center;color:@(a.Expected ? "#a6e3a1" : "#f38ba8");">
-                                    @(a.Expected ? "✓" : "✗")
-                                </td>
-                                <td style="text-align:center;">
-                                    @if (res is null)
-                                    {
-                                        <span style="color:#6c7086;">—</span>
-                                    }
-                                    else if (res.Value)
-                                    {
-                                        <span class="result-allowed">✓ allow</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="result-denied">✗ deny</span>
-                                    }
-                                </td>
-                                <td class="delete-col" style="color:#89b4fa;" @onclick="() => RunAssertion(idx)">▶</td>
-                                <td class="delete-col" @onclick="() => RemoveAssertion(idx)">✕</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                var runCount  = _assertionResults.Count(r => r.HasValue);
+                var passCount = Assertions.Where((a, i) =>
+                    i < _assertionResults.Count &&
+                    _assertionResults[i].HasValue &&
+                    _assertionResults[i]!.Value == a.Expected).Count();
+                var progressPct = runCount == 0 ? 0 : (int)(passCount * 100.0 / Assertions.Count);
+
+                @if (runCount > 0)
+                {
+                    <div class="assertion-progress">
+                        <div class="assertion-progress-bar">
+                            <div class="assertion-progress-fill" style="width:@progressPct%;"></div>
+                        </div>
+                        <span class="assertion-progress-label">@passCount / @Assertions.Count passed</span>
+                    </div>
+                }
+                else
+                {
+                    <div style="font-size:11px;color:var(--text-lo);margin-bottom:6px;">@Assertions.Count assertion@(Assertions.Count == 1 ? "" : "s") — not run</div>
+                }
+
+                @for (int i = 0; i < Assertions.Count; i++)
+                {
+                    var idx = i;
+                    var a = Assertions[i];
+                    var res = idx < _assertionResults.Count ? _assertionResults[idx] : (bool?)null;
+                    var hasResult = res.HasValue;
+                    var passed = hasResult && res!.Value == a.Expected;
+                    var failed = hasResult && res!.Value != a.Expected;
+                    var cardClass = passed ? "assertion-card pass" : failed ? "assertion-card fail" : "assertion-card";
+                    var iconClass = passed ? "assertion-card-icon pass" : failed ? "assertion-card-icon fail" : "assertion-card-icon pending";
+                    var icon = passed ? "✓" : failed ? "✗" : "—";
+
+                    <div class="@cardClass">
+                        <span class="@iconClass">@icon</span>
+                        <div class="assertion-card-sentence">
+                            <span class="tok-subject">@a.SubjectType:@a.SubjectId</span>
+                            <span class="tok-word">can</span>
+                            <span class="tok-perm">@a.Permission</span>
+                            <span class="tok-word">on</span>
+                            <span class="tok-entity">@a.EntityType:@a.EntityId</span>
+                        </div>
+                        <span class="assertion-expect-badge @(a.Expected ? "expect-allow" : "expect-deny")">
+                            expect @(a.Expected ? "allow" : "deny")
+                        </span>
+                        <div class="assertion-card-actions">
+                            <button class="assertion-run-btn" title="Run" @onclick="() => RunAssertion(idx)">&#9654;</button>
+                            <button class="assertion-del-btn" title="Remove" @onclick="() => RemoveAssertion(idx)">&#10005;</button>
+                        </div>
+                    </div>
+                }
             }
 
             <!-- Add assertion form -->
@@ -126,17 +115,17 @@
 
         @if (_activeTab == Tab.LookupEntity)
         {
-            <div class="section-title">Which entities can subject access?</div>
+            <div class="section-title">What entities can a subject access?</div>
             <div class="form-row">
-                <span>Which</span>
-                <select class="vtt-select" value="@_leKey" @onchange="OnLeKeyChanged">
-                    <option value="">permission</option>
-                    @foreach (var p in CheckTargets)
+                <span class="form-row-word">What</span>
+                <select class="vtt-select" @bind="_leEntityType">
+                    <option value="">entity type</option>
+                    @foreach (var et in EntityTypes)
                     {
-                        <option value="@(p.EntityType + "|" + p.Key)">@p.Key (@p.EntityType)</option>
+                        <option value="@et">@et</option>
                     }
                 </select>
-                <span>can</span>
+                <span class="form-row-word">can</span>
                 <select class="vtt-select" @bind="_leSubjectType">
                     <option value="">subject type</option>
                     @foreach (var et in EntityTypes)
@@ -144,9 +133,16 @@
                         <option value="@et">@et</option>
                     }
                 </select>
-                <span>:</span>
+                <span class="form-row-word">:</span>
                 <input class="vtt-input" placeholder="subject id" @bind="_leSubjectId" style="width:90px;" />
-                <span>?</span>
+                <select class="vtt-select" @bind="_lePermission">
+                    <option value="">permission</option>
+                    @foreach (var p in LePermissionsForType(_leEntityType))
+                    {
+                        <option value="@p">@p</option>
+                    }
+                </select>
+                <span class="form-row-word">?</span>
                 <button class="vtt-btn" @onclick="RunLookupEntity">Run</button>
             </div>
 
@@ -159,10 +155,10 @@
                     }
                     else
                     {
-                        <div class="result-list">
+                        <div class="result-pills">
                             @foreach (var id in _leResults)
                             {
-                                <div>@_leEntityType:@id</div>
+                                <span class="result-pill"><span class="pill-type">@_leEntityType:</span>@id</span>
                             }
                         </div>
                     }
@@ -209,10 +205,10 @@
                     }
                     else
                     {
-                        <div class="result-list">
+                        <div class="result-pills">
                             @foreach (var id in _lsResults)
                             {
-                                <div>@_lsSubjectType:@id</div>
+                                <span class="result-pill"><span class="pill-type">@_lsSubjectType:</span>@id</span>
                             }
                         </div>
                     }
@@ -267,9 +263,6 @@
     // Assertions bulk-paste state
     private string _bulkAssertionText = string.Empty;
 
-    // LookupEntity unified key state
-    private string _leKey = string.Empty;          // "entityType|permission"
-
     // LookupSubject unified key state
     private string _lsKey = string.Empty;          // "entityType|permission"
 
@@ -302,13 +295,15 @@
         _newAPermission = _newAKey[(sep + 1)..];
     }
 
-    private void OnLeKeyChanged(ChangeEventArgs e)
+    private IEnumerable<string> LePermissionsForType(string entityType)
     {
-        _leKey = e.Value?.ToString() ?? string.Empty;
-        var sep = _leKey.IndexOf('|');
-        if (sep < 0) { _leEntityType = _lePermission = string.Empty; return; }
-        _leEntityType = _leKey[..sep];
-        _lePermission = _leKey[(sep + 1)..];
+        var schema = SchemaService.Schema;
+        if (schema is null || !schema.Entities.TryGetValue(entityType, out var entity))
+            yield break;
+        foreach (var perm in entity.Permissions.Keys)
+            yield return perm;
+        foreach (var rel in entity.Relations.Keys)
+            yield return rel;
     }
 
     private void OnLsKeyChanged(ChangeEventArgs e)

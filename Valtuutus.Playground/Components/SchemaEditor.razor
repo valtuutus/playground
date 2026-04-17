@@ -50,10 +50,17 @@
         new()
         {
             Language = "valtuutus",
-            Theme = "vs-dark",
+            Theme = "vtt-dark",
             Value = string.Empty,   // always start empty; Home.razor pushes the real value via OnEditorReady
             Minimap = new EditorMinimapOptions { Enabled = false },
             AutomaticLayout = true,
+            WordWrap = "on",
+            ScrollBeyondLastLine = false,
+            Scrollbar = new EditorScrollbarOptions
+            {
+                Horizontal = "hidden",
+                HandleMouseWheel = true,
+            },
         };
 
     private async Task OnEditorInit()

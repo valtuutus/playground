@@ -136,23 +136,62 @@ html, body {
 
 .app-header-fill { flex: 1; }
 
-/* ══ Layout ════════════════════════════════════════════════════ */
+/* ══ Layout — B2 Grid ══════════════════════════════════════════ */
 
-.two-col {
+.app-layout-b2 {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 480px 4px 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   min-height: 0;
   overflow: hidden;
 }
 
-.left-col, .right-col {
+.b2-schema {
+  grid-column: 1;
+  grid-row: 1 / 3;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.left-col { border-right: 1px solid var(--border-base); }
+.b2-resize-handle {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  background: var(--border-base);
+  cursor: col-resize;
+  transition: background 0.12s;
+  position: relative;
+}
+
+.b2-resize-handle:hover,
+.b2-resize-handle.dragging { background: var(--accent-soft); }
+
+.b2-graph {
+  grid-column: 3 / 5;
+  grid-row: 1;
+  border-bottom: 1px solid var(--border-base);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.b2-data {
+  grid-column: 3;
+  grid-row: 2;
+  border-right: 1px solid var(--border-base);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.b2-query {
+  grid-column: 4;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .panel {
   display: flex;
@@ -267,10 +306,12 @@ html, body {
   margin-bottom: 8px;
 }
 
-.form-row > span {
+.form-row > span,
+.form-row-word {
   color: var(--text-lo);
   font-size: 11px;
   font-style: italic;
+  white-space: nowrap;
 }
 
 .vtt-select, .vtt-input {
@@ -419,9 +460,129 @@ html, body {
 }
 .data-table td.delete-col:hover { color: var(--err); }
 
-/* Assertion row states */
-.data-table tr.assertion-fail td { background: var(--err-dim); }
-.data-table tr.assertion-pass td { background: transparent; }
+/* ══ Assertion Cards ════════════════════════════════════════════ */
+
+.assertion-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.assertion-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--border-base);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.assertion-progress-fill {
+  height: 100%;
+  background: var(--ok);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.assertion-progress-label {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-mid);
+  white-space: nowrap;
+}
+
+.assertion-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-base);
+  border-left: 3px solid var(--border-base);
+  margin-bottom: 4px;
+  font-size: 11px;
+  background: var(--bg-panel);
+  transition: border-color 0.12s;
+}
+
+.assertion-card.pass {
+  background: var(--ok-dim);
+  border-left-color: var(--ok);
+}
+
+.assertion-card.fail {
+  background: var(--err-dim);
+  border-left-color: var(--err);
+}
+
+.assertion-card-icon {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.assertion-card-icon.pass    { color: var(--ok); }
+.assertion-card-icon.fail    { color: var(--err); }
+.assertion-card-icon.pending { color: var(--text-lo); }
+
+.assertion-card-sentence {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  color: var(--text-hi);
+}
+
+.assertion-card-sentence .tok-subject { color: var(--text-hi); }
+.assertion-card-sentence .tok-perm    { color: var(--rel); }
+.assertion-card-sentence .tok-entity  { color: var(--err); }
+.assertion-card-sentence .tok-word    { color: var(--text-lo); font-style: italic; font-family: var(--font-ui); }
+
+.assertion-expect-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.assertion-expect-badge.expect-allow {
+  background: var(--ok-dim);
+  color: var(--ok);
+  border: 1px solid rgba(88, 216, 136, 0.25);
+}
+
+.assertion-expect-badge.expect-deny {
+  background: var(--err-dim);
+  color: var(--err);
+  border: 1px solid rgba(239, 104, 120, 0.25);
+}
+
+.assertion-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.assertion-run-btn,
+.assertion-del-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  line-height: 1;
+  color: var(--text-lo);
+}
+
+.assertion-run-btn:hover { color: var(--accent); }
+.assertion-del-btn:hover { color: var(--err); }
 
 /* ══ Results ═══════════════════════════════════════════════════ */
 
@@ -446,6 +607,29 @@ html, body {
   line-height: 1.9;
 }
 
+/* ══ Result Pills ══════════════════════════════════════════════ */
+
+.result-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.result-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--teal-dim);
+  color: var(--teal);
+  border: 1px solid rgba(64, 208, 216, 0.25);
+  border-radius: var(--radius);
+  padding: 3px 9px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.result-pill .pill-type { color: var(--text-lo); }
+
 /* ══ Schema Validation Badges ══════════════════════════════════ */
 
 .badge-valid {
@@ -464,12 +648,12 @@ html, body {
 
 /* ══ Mermaid Graph ═════════════════════════════════════════════ */
 
-.mermaid-container {
+.cyto-container {
   width: 100%;
-  overflow: auto;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-app);
 }
-
-.mermaid-container svg { max-width: 100%; }
 
 /* ══ Toast ═════════════════════════════════════════════════════ */
 
@@ -515,4 +699,23 @@ html, body {
   position: absolute;
   right: 12px;
   top: 8px;
+}
+
+/* ══ Light Theme ════════════════════════════════════════════════ */
+
+html.light {
+  --bg-app:    #f0f4ff;
+  --bg-panel:  #e4eaf8;
+  --bg-surface: #d8e0f0;
+  --bg-elevated: #ccd4e8;
+  --bg-input:  #d0d8ec;
+  --bg-hover:  #c4ceea;
+
+  --border-strong: #8fa4c8;
+  --border-base:   #b0bedd;
+  --border-dim:    #c8d4e8;
+
+  --text-hi:  #0c1830;
+  --text-mid: #3a5070;
+  --text-lo:  #7090b0;
 }

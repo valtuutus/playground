@@ -5,20 +5,16 @@
     <div class="panel-header">
         <span>Entity Graph</span>
     </div>
-    <div class="panel-body mermaid-container" id="mermaid-container"></div>
+    <div class="panel-body cyto-container" id="cyto-container"></div>
 </div>
 
 @code {
-    /// <summary>
-    /// Regenerates the Mermaid diagram from the current schema.
-    /// Call this after schema changes have been applied.
-    /// </summary>
     public async Task Refresh()
     {
         var schema = SchemaService.Schema;
         if (schema is null) return;
 
-        var definition = MermaidGenerator.Generate(schema);
-        await JS.InvokeVoidAsync("renderMermaid", "mermaid-container", definition);
+        var json = GraphDataBuilder.BuildJson(schema);
+        await JS.InvokeVoidAsync("renderCytoscape", "cyto-container", json);
     }
 }

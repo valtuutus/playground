@@ -46,8 +46,8 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
         var cut = Render<QueryPanel>(p => p
             .Add(q => q.Assertions, assertions));
 
-        var notRunCells = cut.FindAll("td").Where(td => td.TextContent.Trim() == "—").ToList();
-        Assert.Equal(assertions.Count, notRunCells.Count);
+        var pendingIcons = cut.FindAll(".assertion-card-icon.pending");
+        Assert.Equal(assertions.Count, pendingIcons.Count);
     }
 
     [Fact]
@@ -57,8 +57,9 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
         var cut = Render<QueryPanel>(p => p
             .Add(q => q.Assertions, assertions));
 
-        var badge = cut.FindAll("span").First(s => s.TextContent.Contains("assertions"));
-        Assert.Contains($"{assertions.Count} assertions", badge.TextContent);
+        // Before running, shows "N assertions — not run" text
+        var notRunDiv = cut.FindAll("div").First(d => d.TextContent.Contains("assertions") && d.TextContent.Contains("not run"));
+        Assert.Contains($"{assertions.Count} assertion", notRunDiv.TextContent);
     }
 
     // -------------------------------------------------------------------------
@@ -78,8 +79,8 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
 
         cut.WaitForAssertion(() =>
         {
-            var notRunCells = cut.FindAll("td").Where(td => td.TextContent.Trim() == "—").ToList();
-            Assert.Empty(notRunCells);
+            var pendingIcons = cut.FindAll(".assertion-card-icon.pending");
+            Assert.Empty(pendingIcons);
         }, timeout: TimeSpan.FromSeconds(10));
     }
 
@@ -96,9 +97,9 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
 
         cut.WaitForAssertion(() =>
         {
-            var badge = cut.FindAll("span").FirstOrDefault(s => s.ClassList.Contains("badge-valid"));
-            Assert.NotNull(badge);
-            Assert.Contains($"{assertions.Count} / {assertions.Count} passing", badge.TextContent);
+            var label = cut.FindAll(".assertion-progress-label").FirstOrDefault();
+            Assert.NotNull(label);
+            Assert.Contains($"{assertions.Count} / {assertions.Count} passed", label.TextContent);
         }, timeout: TimeSpan.FromSeconds(10));
     }
 
@@ -113,14 +114,13 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
         var cut = Render<QueryPanel>(p => p
             .Add(q => q.Assertions, assertions));
 
-        var runRowBtn = cut.FindAll("td.delete-col")
-            .First(td => td.TextContent.Trim() == "▶");
+        var runRowBtn = cut.FindAll("button.assertion-run-btn").First();
         await cut.InvokeAsync(() => runRowBtn.Click());
 
         cut.WaitForAssertion(() =>
         {
-            var notRunCells = cut.FindAll("td").Where(td => td.TextContent.Trim() == "—").ToList();
-            Assert.Equal(assertions.Count - 1, notRunCells.Count);
+            var pendingIcons = cut.FindAll(".assertion-card-icon.pending");
+            Assert.Equal(assertions.Count - 1, pendingIcons.Count);
         }, timeout: TimeSpan.FromSeconds(5));
     }
 
@@ -137,13 +137,12 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
             .Add(q => q.Assertions, assertions)
             .Add(q => q.OnAssertionsChanged, EventCallback.Factory.Create(this, () => changed++)));
 
-        var initialRows = cut.FindAll("tbody tr").Count;
+        var initialCards = cut.FindAll(".assertion-card").Count;
 
-        var removeBtn = cut.FindAll("td.delete-col")
-            .First(td => td.TextContent.Trim() == "✕");
+        var removeBtn = cut.FindAll("button.assertion-del-btn").First();
         await cut.InvokeAsync(() => removeBtn.Click());
 
-        Assert.Equal(initialRows - 1, cut.FindAll("tbody tr").Count);
+        Assert.Equal(initialCards - 1, cut.FindAll(".assertion-card").Count);
         Assert.Equal(1, changed);
     }
 
@@ -160,12 +159,13 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
             .Add(q => q.Assertions, assertions)
             .Add(q => q.OnAssertionsChanged, EventCallback.Factory.Create(this, () => changed++)));
 
-        // Re-query elements after each Change to avoid stale references after re-renders
+        // Add-assertion form selects: [0]=subjectType, [1]=permission(entityType|key), [2]=expected
+        // Inputs: [0]=subjectId, [1]=entityId
         await cut.InvokeAsync(() => cut.FindAll("select.vtt-select")[0].Change("user"));
         await cut.InvokeAsync(() => cut.FindAll("input.vtt-input")[0].Change("torvalds"));
-        await cut.InvokeAsync(() => cut.FindAll("select.vtt-select")[1].Change("push"));
-        await cut.InvokeAsync(() => cut.FindAll("select.vtt-select")[2].Change("repository"));
+        await cut.InvokeAsync(() => cut.FindAll("select.vtt-select")[1].Change("repository|push"));
         await cut.InvokeAsync(() => cut.FindAll("input.vtt-input")[1].Change("linux"));
+        // select[2] = expected; default is "allow" — leave as-is
 
         var addBtn = cut.FindAll("button").First(b => b.TextContent.Contains("Add"));
         await cut.InvokeAsync(() => addBtn.Click());
@@ -233,15 +233,15 @@ public sealed class QueryPanelTests : BunitContext, IAsyncLifetime
         await cut.InvokeAsync(() => runAllBtn.Click());
 
         cut.WaitForAssertion(() =>
-            Assert.DoesNotContain(cut.FindAll("td"), td => td.TextContent.Trim() == "—"),
+            Assert.Empty(cut.FindAll(".assertion-card-icon.pending")),
             timeout: TimeSpan.FromSeconds(10));
 
         await cut.InvokeAsync(() => cut.Instance.ClearAssertionResults());
 
         cut.WaitForAssertion(() =>
         {
-            var notRunCells = cut.FindAll("td").Where(td => td.TextContent.Trim() == "—").ToList();
-            Assert.Equal(assertions.Count, notRunCells.Count);
+            var pendingIcons = cut.FindAll(".assertion-card-icon.pending");
+            Assert.Equal(assertions.Count, pendingIcons.Count);
         });
     }
 }

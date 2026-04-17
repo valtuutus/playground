@@ -6,27 +6,38 @@
 
 <PageTitle>Valtuutus Playground</PageTitle>
 
-<div class="two-col">
-    <div class="left-col">
-        <div class="panel" style="flex:1.2">
+<div class="app-shell">
+    <header class="app-header">
+        <div class="app-brand">
+            <span class="brand-name">valtuutus</span>
+            <span class="brand-sep">/</span>
+            <span class="brand-sub">playground</span>
+        </div>
+        <div class="app-header-fill"></div>
+        <a href="https://github.com/valtuutus/valtuutus" target="_blank" class="vtt-btn-ghost">GitHub</a>
+        <button class="vtt-btn-ghost" @onclick="ToggleTheme">@(_isLightTheme ? "Dark" : "Light")</button>
+        <button class="vtt-btn" @onclick="ShareAsync">Share</button>
+    </header>
+
+    <div class="app-layout-b2">
+        <div class="b2-schema">
             <SchemaEditor @ref="_schemaEditor"
                           ActivePresetName="@_activePresetName"
                           OnSchemaChanged="OnSchemaChanged"
                           OnPresetLoaded="OnPresetLoaded"
                           OnEditorReady="OnEditorReady" />
         </div>
-        <div class="panel" style="flex:0.8">
+        <div class="b2-resize-handle"></div>
+        <div class="b2-graph">
             <EntityGraph @ref="_graph" />
         </div>
-    </div>
-    <div class="right-col">
-        <div class="panel" style="flex:1">
+        <div class="b2-data">
             <DataPanel @ref="_dataPanel"
                        Tuples="_tuples"
                        Attributes="_attributes"
                        OnDataChanged="OnDataChanged" />
         </div>
-        <div class="panel" style="flex:1">
+        <div class="b2-query">
             <QueryPanel @ref="_queryPanel"
                         Assertions="_assertions"
                         OnAssertionsChanged="OnAssertionsChanged" />
@@ -36,9 +47,7 @@
 
 @if (_showToast)
 {
-    <div style="position:fixed;bottom:20px;right:20px;background:#a6e3a1;color:#1e1e2e;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600">
-        Link copied!
-    </div>
+    <div class="vtt-toast">Link copied!</div>
 }
 
 @code {
@@ -60,10 +69,7 @@
     private bool _asyncInitDone;
 
     private bool _showToast;
-    private DotNetObjectReference<Home>? _selfRef;
-
-    // Static instance reference for JSInvokable static method
-    private static Home? _current;
+    private bool _isLightTheme;
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,19 +110,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-
-        _current = this;
-        _selfRef = DotNetObjectReference.Create(this);
-
-        // Register listener for the vtt-share custom DOM event from Share button
-        await JS.InvokeVoidAsync("eval", """
-            (function() {
-                document.addEventListener('vtt-share', function() {
-                    DotNet.invokeMethodAsync('Valtuutus.Playground', 'ShareFromHome');
-                });
-            })();
-            """);
-
+        await JS.InvokeVoidAsync("initSchemaResize");
         await _graph.Refresh();
     }
 
@@ -187,11 +181,11 @@
         await PersistenceService.SaveAsync(BuildCurrentState());
     }
 
-    [JSInvokable("ShareFromHome")]
-    public static async Task ShareFromHome()
+    private async Task ToggleTheme()
     {
-        if (_current is not null)
-            await _current.ShareAsync();
+        _isLightTheme = !_isLightTheme;
+        var cls = _isLightTheme ? "add" : "remove";
+        await JS.InvokeVoidAsync("eval", $"document.documentElement.classList.{cls}('light')");
     }
 
     private async Task ShareAsync()
@@ -224,10 +218,5 @@
             await SchemaService.ResetDataAsync(_tuples, _attributes);
     }
 
-    public void Dispose()
-    {
-        if (_current == this)
-            _current = null;
-        _selfRef?.Dispose();
-    }
+    public void Dispose() { }
 }
