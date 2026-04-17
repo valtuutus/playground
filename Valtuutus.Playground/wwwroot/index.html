@@ -4,12 +4,13 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Valtuutus.Playground</title>
+    <title>Valtuutus Playground</title>
     <base href="/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" />
     <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="stylesheet" href="_content/Sysinfocus.AspNetCore.Components/styles.css" />
     <link rel="stylesheet" href="_content/Sysinfocus.AspNetCore.Components/Sysinfocus.AspNetCore.Components.bundle.scp.css" />
@@ -17,11 +18,13 @@
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="vtt-loading">
+            <svg class="vtt-loading-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="5,10 20,32 35,10" stroke="#f5ae38" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            </svg>
+            <div class="vtt-loading-label">Valtuutus Playground</div>
+            <div class="vtt-loading-bar"><div class="vtt-loading-bar-inner"></div></div>
+        </div>
     </div>
 
     <div id="blazor-error-ui">

@@ -701,6 +701,60 @@ html, body {
   top: 8px;
 }
 
+/* ══ Loading Screen ════════════════════════════════════════════ */
+
+.vtt-loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #101525;
+}
+
+.vtt-loading-icon {
+  width: 52px;
+  height: 52px;
+  animation: vtt-loading-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes vtt-loading-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.vtt-loading-label {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #445870;
+}
+
+.vtt-loading-bar {
+  width: 100px;
+  height: 2px;
+  background: #1e2848;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.vtt-loading-bar-inner {
+  height: 100%;
+  width: 40%;
+  background: #f5ae38;
+  border-radius: 1px;
+  animation: vtt-loading-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes vtt-loading-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 /* ══ Light Theme ════════════════════════════════════════════════ */
 
 html.light {
