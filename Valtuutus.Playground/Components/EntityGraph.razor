@@ -1,0 +1,20 @@
+@inject SchemaService SchemaService
+@inject IJSRuntime JS
+
+<div class="panel" style="height:100%;">
+    <div class="panel-header">
+        <span>Entity Graph</span>
+    </div>
+    <div class="panel-body cyto-container" id="cyto-container"></div>
+</div>
+
+@code {
+    public async Task Refresh()
+    {
+        var schema = SchemaService.Schema;
+        if (schema is null) return;
+
+        var json = GraphDataBuilder.BuildJson(schema);
+        await JS.InvokeVoidAsync("renderCytoscape", "cyto-container", json);
+    }
+}

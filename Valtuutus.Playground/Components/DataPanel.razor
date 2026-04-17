@@ -1,0 +1,289 @@
+@inject SchemaService SchemaService
+
+<div class="panel" style="height:100%; display:flex; flex-direction:column;">
+    <div class="panel-header">
+        <span>Data</span>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tabs">
+        <button class="tab @(_activeTab == Tab.Tuples ? "active" : "")" @onclick="() => _activeTab = Tab.Tuples">Tuples</button>
+        <button class="tab @(_activeTab == Tab.Attributes ? "active" : "")" @onclick="() => _activeTab = Tab.Attributes">Attributes</button>
+    </div>
+
+    <div class="panel-body">
+        @if (_activeTab == Tab.Tuples)
+        {
+            <!-- Add form -->
+            <div class="section-title">Add Tuple</div>
+            <div class="form-row">
+                <select class="vtt-select" value="@_newTupleKey" @onchange="OnTupleKeyChanged">
+                    <option value="">relation</option>
+                    @foreach (var (et, rel) in AllTupleRelations)
+                    {
+                        <option value="@(et + "|" + rel)">@rel (@et)</option>
+                    }
+                </select>
+                <input class="vtt-input" placeholder="entity id" @bind="_newTupleEntityId" />
+                <select class="vtt-select" @bind="_newTupleSubjectType">
+                    <option value="">subject type</option>
+                    @foreach (var et in EntityTypes)
+                    {
+                        <option value="@et">@et</option>
+                    }
+                </select>
+                <input class="vtt-input" placeholder="subject id" @bind="_newTupleSubjectId" />
+                <button class="vtt-btn" @onclick="AddTuple">+ Add</button>
+            </div>
+
+            <!-- Bulk paste -->
+            <div class="section-title" style="margin-top:8px;">Bulk Paste</div>
+            <textarea class="vtt-textarea" rows="3"
+                      placeholder="entityType:entityId#relation@subjectType:subjectId"
+                      @bind="_bulkTupleText"></textarea>
+            <div style="margin-top:4px;">
+                <button class="vtt-btn-outline" @onclick="ApplyBulkTuples">Apply</button>
+            </div>
+
+            <!-- Loaded table -->
+            @if (Tuples.Count > 0)
+            {
+                <div class="section-title" style="margin-top:10px;">Loaded (@Tuples.Count)</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Entity</th>
+                            <th>Relation</th>
+                            <th>Subject</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in Tuples.ToList())
+                        {
+                            <tr>
+                                <td class="entity-col">@t.EntityType:@t.EntityId</td>
+                                <td class="relation-col">@t.Relation</td>
+                                <td>@t.SubjectType:@t.SubjectId@(string.IsNullOrEmpty(t.SubjectRelation) ? "" : "#" + t.SubjectRelation)</td>
+                                <td class="delete-col" @onclick="() => RemoveTuple(t)">&#10005;</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else
+        {
+            <!-- Add form -->
+            <div class="section-title">Add Attribute</div>
+            <div class="form-row">
+                <select class="vtt-select" value="@_newAttrKey" @onchange="OnAttrKeyChanged">
+                    <option value="">attribute</option>
+                    @foreach (var (et, attr) in AllAttributes)
+                    {
+                        <option value="@(et + "|" + attr)">@attr (@et)</option>
+                    }
+                </select>
+                <input class="vtt-input" placeholder="entity id" @bind="_newAttrEntityId" />
+                <input class="vtt-input" placeholder="value" @bind="_newAttrValue" />
+                <button class="vtt-btn" @onclick="AddAttribute">+ Add</button>
+            </div>
+
+            <!-- Bulk paste -->
+            <div class="section-title" style="margin-top:8px;">Bulk Paste</div>
+            <textarea class="vtt-textarea" rows="3"
+                      placeholder="entityType:entityId$attribute=value"
+                      @bind="_bulkAttrText"></textarea>
+            <div style="margin-top:4px;">
+                <button class="vtt-btn-outline" @onclick="ApplyBulkAttributes">Apply</button>
+            </div>
+
+            <!-- Loaded table -->
+            @if (Attributes.Count > 0)
+            {
+                <div class="section-title" style="margin-top:10px;">Loaded (@Attributes.Count)</div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Entity</th>
+                            <th>Attribute</th>
+                            <th>Value</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in Attributes.ToList())
+                        {
+                            <tr>
+                                <td class="entity-col">@a.EntityType:@a.EntityId</td>
+                                <td class="relation-col">@a.Attribute</td>
+                                <td>@a.Value</td>
+                                <td class="delete-col" @onclick="() => RemoveAttribute(a)">&#10005;</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private enum Tab { Tuples, Attributes }
+
+    [Parameter] public List<RelationTuple> Tuples { get; set; } = new();
+    [Parameter] public List<AttributeTuple> Attributes { get; set; } = new();
+    [Parameter] public EventCallback OnDataChanged { get; set; }
+
+    private Tab _activeTab = Tab.Tuples;
+
+    // Tuple add-form state
+    private string _newTupleKey = string.Empty;       // "entityType|relation"
+    private string _newTupleEntityType = string.Empty;
+    private string _newTupleRelation = string.Empty;
+    private string _newTupleEntityId = string.Empty;
+    private string _newTupleSubjectType = string.Empty;
+    private string _newTupleSubjectId = string.Empty;
+
+    // Attribute add-form state
+    private string _newAttrKey = string.Empty;        // "entityType|attribute"
+    private string _newAttrEntityType = string.Empty;
+    private string _newAttrName = string.Empty;
+    private string _newAttrEntityId = string.Empty;
+    private string _newAttrValue = string.Empty;
+
+    // Bulk paste state
+    private string _bulkTupleText = string.Empty;
+    private string _bulkAttrText = string.Empty;
+
+    private IEnumerable<string> EntityTypes =>
+        SchemaService.Schema?.Entities.Keys ?? Enumerable.Empty<string>();
+
+    private IEnumerable<(string EntityType, string Relation)> AllTupleRelations
+    {
+        get
+        {
+            var schema = SchemaService.Schema;
+            if (schema is null) yield break;
+            foreach (var (et, entity) in schema.Entities)
+                foreach (var rel in entity.Relations.Keys)
+                    yield return (et, rel);
+        }
+    }
+
+    private IEnumerable<(string EntityType, string Attribute)> AllAttributes
+    {
+        get
+        {
+            var schema = SchemaService.Schema;
+            if (schema is null) yield break;
+            foreach (var (et, entity) in schema.Entities)
+                foreach (var attr in entity.Attributes.Keys)
+                    yield return (et, attr);
+        }
+    }
+
+    private void OnTupleKeyChanged(ChangeEventArgs e)
+    {
+        _newTupleKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _newTupleKey.IndexOf('|');
+        if (sep < 0) { _newTupleEntityType = _newTupleRelation = string.Empty; return; }
+        _newTupleEntityType = _newTupleKey[..sep];
+        _newTupleRelation = _newTupleKey[(sep + 1)..];
+    }
+
+    private void OnAttrKeyChanged(ChangeEventArgs e)
+    {
+        _newAttrKey = e.Value?.ToString() ?? string.Empty;
+        var sep = _newAttrKey.IndexOf('|');
+        if (sep < 0) { _newAttrEntityType = _newAttrName = string.Empty; return; }
+        _newAttrEntityType = _newAttrKey[..sep];
+        _newAttrName = _newAttrKey[(sep + 1)..];
+    }
+
+    private async Task AddTuple()
+    {
+        if (string.IsNullOrEmpty(_newTupleEntityType) || string.IsNullOrEmpty(_newTupleEntityId) ||
+            string.IsNullOrEmpty(_newTupleRelation) || string.IsNullOrEmpty(_newTupleSubjectType) ||
+            string.IsNullOrEmpty(_newTupleSubjectId))
+            return;
+
+        var shorthand = $"{_newTupleEntityType}:{_newTupleEntityId}#{_newTupleRelation}@{_newTupleSubjectType}:{_newTupleSubjectId}";
+        if (TupleParser.TryParse(shorthand, out var tuple))
+        {
+            Tuples.Add(tuple.Value);
+            _newTupleKey = string.Empty;
+            _newTupleEntityType = string.Empty;
+            _newTupleRelation = string.Empty;
+            _newTupleEntityId = string.Empty;
+            _newTupleSubjectId = string.Empty;
+            await OnDataChanged.InvokeAsync();
+        }
+    }
+
+    private async Task RemoveTuple(RelationTuple t)
+    {
+        Tuples.Remove(t);
+        await OnDataChanged.InvokeAsync();
+    }
+
+    private async Task ApplyBulkTuples()
+    {
+        if (string.IsNullOrWhiteSpace(_bulkTupleText)) return;
+        var parsed = TupleParser.ParseLines(_bulkTupleText.Split('\n'));
+        Tuples.AddRange(parsed);
+        _bulkTupleText = string.Empty;
+        await OnDataChanged.InvokeAsync();
+    }
+
+    private async Task AddAttribute()
+    {
+        if (string.IsNullOrEmpty(_newAttrEntityType) || string.IsNullOrEmpty(_newAttrEntityId) ||
+            string.IsNullOrEmpty(_newAttrName) || string.IsNullOrEmpty(_newAttrValue))
+            return;
+
+        var shorthand = $"{_newAttrEntityType}:{_newAttrEntityId}${_newAttrName}={_newAttrValue}";
+        if (AttributeParser.TryParse(shorthand, out var attr))
+        {
+            Attributes.Add(attr);
+            _newAttrKey = string.Empty;
+            _newAttrEntityType = string.Empty;
+            _newAttrName = string.Empty;
+            _newAttrEntityId = string.Empty;
+            _newAttrValue = string.Empty;
+            await OnDataChanged.InvokeAsync();
+        }
+    }
+
+    private async Task RemoveAttribute(AttributeTuple a)
+    {
+        Attributes.Remove(a);
+        await OnDataChanged.InvokeAsync();
+    }
+
+    private async Task ApplyBulkAttributes()
+    {
+        if (string.IsNullOrWhiteSpace(_bulkAttrText)) return;
+        var parsed = AttributeParser.ParseLines(_bulkAttrText.Split('\n'));
+        Attributes.AddRange(parsed);
+        _bulkAttrText = string.Empty;
+        await OnDataChanged.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Clears existing data and reloads from preset seed strings.
+    /// </summary>
+    public async Task LoadPresetData(string seedTuples, string seedAttrs)
+    {
+        Tuples.Clear();
+        Attributes.Clear();
+
+        if (!string.IsNullOrWhiteSpace(seedTuples))
+            Tuples.AddRange(TupleParser.ParseLines(seedTuples.Split('\n')));
+
+        if (!string.IsNullOrWhiteSpace(seedAttrs))
+            Attributes.AddRange(AttributeParser.ParseLines(seedAttrs.Split('\n')));
+
+        await OnDataChanged.InvokeAsync();
+    }
+}

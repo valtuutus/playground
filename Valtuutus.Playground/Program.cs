@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Sysinfocus.AspNetCore.Components;
-using Valtuutus.Core.Configuration;
-using Valtuutus.Data.InMemory;
 using Valtuutus.Playground;
+using Valtuutus.Playground.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -11,7 +10,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSysinfocus(false);
-builder.Services.AddValtuutusCore("entity user {}")
-    .AddInMemory();
+builder.Services.AddScoped<SchemaService>();
+builder.Services.AddScoped<PersistenceService>();
 
 await builder.Build().RunAsync();

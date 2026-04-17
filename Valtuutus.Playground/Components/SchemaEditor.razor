@@ -1,0 +1,108 @@
+@inject SchemaService SchemaService
+@inject IJSRuntime JS
+
+<div class="panel" style="height:100%;">
+    <div class="panel-header">
+        <span>Schema</span>
+
+        <select class="vtt-select" value="@ActivePresetName" @onchange="OnPresetChanged">
+            <option value="">-- preset --</option>
+            @foreach (var p in PresetRegistry.All)
+            {
+                <option value="@p.Name">@p.Name</option>
+            }
+        </select>
+
+        @if (_validation is not null)
+        {
+            @if (_validation.IsValid)
+            {
+                <span class="badge-valid">&#10003; valid</span>
+            }
+            else
+            {
+                <span class="badge-invalid">&#10007; @_validation.Errors[0]</span>
+            }
+        }
+    </div>
+
+    <StandaloneCodeEditor
+        Id="vtt-schema-editor"
+        CssClass="vtt-editor-fill"
+        ConstructionOptions="BuildOptions"
+        @ref="_editor"
+        OnDidInit="async (a) => await OnEditorInit()"
+        OnDidChangeModelContent="OnContentChanged" />
+</div>
+
+@code {
+    [Parameter] public string InitialSchema { get; set; } = string.Empty;
+    [Parameter] public string ActivePresetName { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnSchemaChanged { get; set; }
+    [Parameter] public EventCallback<PresetSchema> OnPresetLoaded { get; set; }
+    /// <summary>Fires once when the Monaco instance is ready to accept SetValue calls.</summary>
+    [Parameter] public EventCallback OnEditorReady { get; set; }
+
+    private StandaloneCodeEditor _editor = default!;
+    private ValidationResult? _validation;
+
+    private StandaloneEditorConstructionOptions BuildOptions(StandaloneCodeEditor editor) =>
+        new()
+        {
+            Language = "valtuutus",
+            Theme = "vtt-dark",
+            Value = string.Empty,   // always start empty; Home.razor pushes the real value via OnEditorReady
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            AutomaticLayout = true,
+            WordWrap = "on",
+            ScrollBeyondLastLine = false,
+            Scrollbar = new EditorScrollbarOptions
+            {
+                Horizontal = "hidden",
+                HandleMouseWheel = true,
+            },
+        };
+
+    private async Task OnEditorInit()
+    {
+        await JS.InvokeVoidAsync("init_vtt");
+        // Notify Home.razor that Monaco is ready; it will call SetValueAsync with the
+        // correct schema regardless of whether its own async init has already finished.
+        await OnEditorReady.InvokeAsync();
+    }
+
+    private async Task OnContentChanged(ModelContentChangedEvent _)
+    {
+        var text = await _editor.GetValue();
+        await ApplySchema(text);
+    }
+
+    private async Task ApplySchema(string text)
+    {
+        _validation = SchemaService.TrySetSchema(text);
+        await OnSchemaChanged.InvokeAsync(text);
+        StateHasChanged();
+    }
+
+    private async Task OnPresetChanged(ChangeEventArgs e)
+    {
+        var name = e.Value?.ToString();
+        if (string.IsNullOrEmpty(name)) return;
+
+        var preset = PresetRegistry.All.FirstOrDefault(p => p.Name == name);
+        if (preset is null) return;
+
+        await _editor.SetValue(preset.Schema);
+        await ApplySchema(preset.Schema);
+        await OnPresetLoaded.InvokeAsync(preset);
+    }
+
+    /// <summary>
+    /// Sets the editor value from outside (e.g., when restoring state).
+    /// </summary>
+    public async Task SetValueAsync(string text)
+    {
+        await _editor.SetValue(text);
+        await ApplySchema(text);
+    }
+}

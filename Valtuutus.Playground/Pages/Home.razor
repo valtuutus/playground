@@ -1,59 +1,222 @@
-﻿@page "/"
-@using System.Diagnostics.CodeAnalysis
-<PageTitle>Home</PageTitle>
+@page "/"
+@inject SchemaService SchemaService
+@inject PersistenceService PersistenceService
+@inject IJSRuntime JS
+@implements IDisposable
 
+<PageTitle>Valtuutus Playground</PageTitle>
 
-<Card>
-    <CardContent>
-        <Combobox Items="_schemas" TItem="SchemaDto" Display="x => x.Name"
-                  SelectedItem="_schemas[0]" Searchable="false"
-                  Label="Use cases"
-                  OnItemSelect="o => { _editor.SetValue(o.Schema); StateHasChanged(); }"/>
+<div class="app-shell">
+    <header class="app-header">
+        <div class="app-brand">
+            <span class="brand-name">valtuutus</span>
+            <span class="brand-sep">/</span>
+            <span class="brand-sub">playground</span>
+        </div>
+        <div class="app-header-fill"></div>
+        <a href="https://github.com/valtuutus/valtuutus" target="_blank" class="vtt-btn-ghost">GitHub</a>
+        <button class="vtt-btn-ghost" @onclick="ToggleTheme">@(_isLightTheme ? "Dark" : "Light")</button>
+        <button class="vtt-btn" @onclick="ShareAsync">Share</button>
+    </header>
 
-        <StandaloneCodeEditor Id="vtt-editor" CssClass="vtt-editor" ConstructionOptions="EditorConstructionOptions"
-                              @ref="_editor" OnDidInit="async (a) => await EditorInitialized(a)"/>
-    </CardContent>
+    <div class="app-layout-b2">
+        <div class="b2-schema">
+            <SchemaEditor @ref="_schemaEditor"
+                          ActivePresetName="@_activePresetName"
+                          OnSchemaChanged="OnSchemaChanged"
+                          OnPresetLoaded="OnPresetLoaded"
+                          OnEditorReady="OnEditorReady" />
+        </div>
+        <div class="b2-resize-handle"></div>
+        <div class="b2-graph">
+            <EntityGraph @ref="_graph" />
+        </div>
+        <div class="b2-data">
+            <DataPanel @ref="_dataPanel"
+                       Tuples="_tuples"
+                       Attributes="_attributes"
+                       OnDataChanged="OnDataChanged" />
+        </div>
+        <div class="b2-query">
+            <QueryPanel @ref="_queryPanel"
+                        Assertions="_assertions"
+                        OnAssertionsChanged="OnAssertionsChanged" />
+        </div>
+    </div>
+</div>
 
-</Card>
-
-
+@if (_showToast)
+{
+    <div class="vtt-toast">Link copied!</div>
+}
 
 @code {
-    private List<SchemaDto> _schemas;
-    [AllowNull]
-    private StandaloneCodeEditor _editor;
-    
-    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    private string _schemaText = string.Empty;
+    private string _activePresetName = string.Empty;
+    private List<RelationTuple> _tuples = new();
+    private List<AttributeTuple> _attributes = new();
+
+    private List<Assertion> _assertions = new();
+    private QueryPanel _queryPanel = default!;
+
+    private EntityGraph _graph = default!;
+    private DataPanel _dataPanel = default!;
+    private SchemaEditor _schemaEditor = default!;
+
+    // Tracks whether both sides are ready to sync:
+    // _schemaText is set by async init, _editorMonacoReady by Monaco's OnEditorReady callback.
+    private bool _editorMonacoReady;
+    private bool _asyncInitDone;
+
+    private bool _showToast;
+    private bool _isLightTheme;
+
+    protected override async Task OnInitializedAsync()
     {
-        return new StandaloneEditorConstructionOptions
+        var saved = await PersistenceService.LoadAsync();
+        var loadedFromSave = false;
+
+        if (saved is not null && !string.IsNullOrWhiteSpace(saved.SchemaText))
         {
-            Theme = "vs-dark",
-            Minimap = new EditorMinimapOptions()
+            var result = SchemaService.TrySetSchema(saved.SchemaText);
+            if (result.IsValid)
             {
-                Enabled = false
-            },
-            AutomaticLayout = true,
-            Language = "valtuutus",
-            Value = _schemas[0].Schema
-        };
+                _schemaText = saved.SchemaText;
+
+                if (saved.Tuples?.Count > 0)
+                    _tuples.AddRange(TupleParser.ParseLines(saved.Tuples));
+
+                if (saved.Attributes?.Count > 0)
+                    _attributes.AddRange(AttributeParser.ParseLines(saved.Attributes));
+
+                if (saved.Assertions?.Count > 0)
+                    _assertions.AddRange(AssertionParser.ParseLines(saved.Assertions));
+
+                await SchemaService.ResetDataAsync(_tuples, _attributes);
+                _activePresetName = PresetRegistry.All.FirstOrDefault(p => p.Schema == _schemaText)?.Name ?? string.Empty;
+                loadedFromSave = true;
+            }
+        }
+
+        if (!loadedFromSave)
+            await LoadPreset(PresetRegistry.All[0]);
+
+        _asyncInitDone = true;
+        // If Monaco is already ready (fired before our async finished), push the schema now.
+        if (_editorMonacoReady)
+            await SyncSchemaToEditorAsync();
     }
 
-    protected override void OnParametersSet()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        _schemas = [new("whatever", "entity user {}")];
+        if (!firstRender) return;
+        await JS.InvokeVoidAsync("initSchemaResize");
+        await _graph.Refresh();
+    }
+
+    private async Task OnEditorReady()
+    {
+        _editorMonacoReady = true;
+        // If async init already completed (stored _schemaText), push it into Monaco now.
+        if (_asyncInitDone)
+            await SyncSchemaToEditorAsync();
+    }
+
+    private async Task SyncSchemaToEditorAsync()
+    {
+        if (string.IsNullOrEmpty(_schemaText)) return;
+        await _schemaEditor.SetValueAsync(_schemaText);
+        await _graph.Refresh();
+    }
+
+    private async Task OnSchemaChanged(string schema)
+    {
+        _schemaText = schema;
+        _activePresetName = PresetRegistry.All.FirstOrDefault(p => p.Schema == schema)?.Name ?? string.Empty;
+        if (SchemaService.IsValid)
+        {
+            await SchemaService.ResetDataAsync(_tuples, _attributes);
+            await _graph.Refresh();
+        }
+        _queryPanel?.ClearAssertionResults();
+        await Persist();
+    }
+
+    private async Task OnPresetLoaded(PresetSchema preset)
+    {
+        _activePresetName = preset.Name;
+        _schemaText = preset.Schema;
+        _assertions = new List<Assertion>(preset.SeedAssertions ?? Array.Empty<Assertion>());
+        await _dataPanel.LoadPresetData(preset.SeedTuples, preset.SeedAttributes);
+        // _tuples and _attributes are updated in-place by LoadPresetData
+        if (SchemaService.IsValid)
+            await SchemaService.ResetDataAsync(_tuples, _attributes);
+        await _graph.Refresh();
+        await Persist();
+    }
+
+    private async Task OnAssertionsChanged()
+    {
+        await Persist();
+    }
+
+    private async Task OnDataChanged()
+    {
+        await SchemaService.ResetDataAsync(_tuples, _attributes);
+        _queryPanel?.ClearAssertionResults();
+        await Persist();
+    }
+
+    private PlaygroundState BuildCurrentState() =>
+        new PlaygroundState
+        {
+            SchemaText = _schemaText,
+            Tuples = _tuples.Select(TupleParser.ToShorthand).ToList(),
+            Attributes = _attributes.Select(AttributeParser.ToShorthand).ToList(),
+            Assertions = _assertions.Select(AssertionParser.ToShorthand).ToList(),
+        };
+
+    private async Task Persist()
+    {
+        await PersistenceService.SaveAsync(BuildCurrentState());
+    }
+
+    private async Task ToggleTheme()
+    {
+        _isLightTheme = !_isLightTheme;
+        var cls = _isLightTheme ? "add" : "remove";
+        await JS.InvokeVoidAsync("eval", $"document.documentElement.classList.{cls}('light')");
+    }
+
+    private async Task ShareAsync()
+    {
+        await PersistenceService.CopyShareUrlToClipboardAsync(BuildCurrentState());
+        _showToast = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        _showToast = false;
         StateHasChanged();
     }
 
-    record SchemaDto(string Name, string Schema)
+    private async Task LoadPreset(PresetSchema preset)
     {
-        
-    }
-    
-    protected async Task EditorInitialized(object _)
-    {
-        var model = await _editor.GetModel();
-        
-        await model.JsRuntime.InvokeVoidAsync("init_vtt");
-    }  
+        _activePresetName = preset.Name;
+        _schemaText = preset.Schema;
+        _assertions = new List<Assertion>(preset.SeedAssertions ?? Array.Empty<Assertion>());
+        SchemaService.TrySetSchema(_schemaText);
 
+        _tuples.Clear();
+        _attributes.Clear();
+
+        if (!string.IsNullOrWhiteSpace(preset.SeedTuples))
+            _tuples.AddRange(TupleParser.ParseLines(preset.SeedTuples.Split('\n')));
+
+        if (!string.IsNullOrWhiteSpace(preset.SeedAttributes))
+            _attributes.AddRange(AttributeParser.ParseLines(preset.SeedAttributes.Split('\n')));
+
+        if (SchemaService.IsValid)
+            await SchemaService.ResetDataAsync(_tuples, _attributes);
+    }
+
+    public void Dispose() { }
 }
