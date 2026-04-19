@@ -40,7 +40,8 @@
         <div class="b2-query">
             <QueryPanel @ref="_queryPanel"
                         Assertions="_assertions"
-                        OnAssertionsChanged="OnAssertionsChanged" />
+                        OnAssertionsChanged="OnAssertionsChanged"
+                        OnExplainRequested="OnExplainRequested" />
         </div>
     </div>
 </div>
@@ -158,6 +159,11 @@
     private async Task OnAssertionsChanged()
     {
         await Persist();
+    }
+
+    private void OnExplainRequested(ExplainRequestedArgs args)
+    {
+        _graph.ShowExplain(args.Result, args.Label);
     }
 
     private async Task OnDataChanged()
