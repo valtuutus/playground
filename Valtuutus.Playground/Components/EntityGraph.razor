@@ -5,7 +5,7 @@
     <div class="panel-header" style="padding:0;">
         <button class="tab @(_activeTab == Tab.EntityGraph ? "active" : "")"
                 style="border-radius:0; border-bottom:none;"
-                @onclick="() => _activeTab = Tab.EntityGraph">Entity Graph</button>
+                @onclick="SwitchToEntityGraph">Entity Graph</button>
         <button class="tab @(_activeTab == Tab.Resolution ? "active" : "")"
                 style="border-radius:0; border-bottom:none;"
                 @onclick="() => _activeTab = Tab.Resolution">Resolution Graph</button>
@@ -28,13 +28,14 @@
     private Tab _activeTab = Tab.EntityGraph;
     private string? _explainLabel;
     private CheckExplainResult? _pendingExplain;
+    private string? _pendingEntityJson;
 
-    public async Task Refresh()
+    public void Refresh()
     {
         var schema = SchemaService.Schema;
         if (schema is null) return;
-        var json = GraphDataBuilder.BuildJson(schema);
-        await JS.InvokeVoidAsync("renderCytoscape", "cyto-container", json);
+        _pendingEntityJson = GraphDataBuilder.BuildJson(schema);
+        StateHasChanged();
     }
 
     public void ShowExplain(CheckExplainResult result, string label)
@@ -45,8 +46,27 @@
         StateHasChanged();
     }
 
+    private void SwitchToEntityGraph()
+    {
+        _activeTab = Tab.EntityGraph;
+        // If a refresh came in while the Resolution tab was active, render it now.
+        if (_pendingEntityJson is null)
+        {
+            var schema = SchemaService.Schema;
+            if (schema is not null)
+                _pendingEntityJson = GraphDataBuilder.BuildJson(schema);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_pendingEntityJson is not null && _activeTab == Tab.EntityGraph)
+        {
+            var json = _pendingEntityJson;
+            _pendingEntityJson = null;
+            await JS.InvokeVoidAsync("renderCytoscape", "cyto-container", json);
+        }
+
         if (_pendingExplain is not null)
         {
             var json = ResolutionGraphBuilder.BuildJson(_pendingExplain);

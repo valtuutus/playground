@@ -112,7 +112,7 @@
     {
         if (!firstRender) return;
         await JS.InvokeVoidAsync("initSchemaResize");
-        await _graph.Refresh();
+        _graph.Refresh();
     }
 
     private async Task OnEditorReady()
@@ -127,7 +127,7 @@
     {
         if (string.IsNullOrEmpty(_schemaText)) return;
         await _schemaEditor.SetValueAsync(_schemaText);
-        await _graph.Refresh();
+        _graph.Refresh();
     }
 
     private async Task OnSchemaChanged(string schema)
@@ -137,7 +137,7 @@
         if (SchemaService.IsValid)
         {
             await SchemaService.ResetDataAsync(_tuples, _attributes);
-            await _graph.Refresh();
+            _graph.Refresh();
         }
         _queryPanel?.ClearAssertionResults();
         await Persist();
@@ -152,7 +152,7 @@
         // _tuples and _attributes are updated in-place by LoadPresetData
         if (SchemaService.IsValid)
             await SchemaService.ResetDataAsync(_tuples, _attributes);
-        await _graph.Refresh();
+        _graph.Refresh();
         await Persist();
     }
 
