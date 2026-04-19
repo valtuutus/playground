@@ -109,6 +109,18 @@ public sealed class SchemaService : IDisposable
     }
 
     /// <summary>
+    /// Runs Explain against the latest seeded data snapshot, returning the full resolution tree.
+    /// </summary>
+    public async Task<CheckExplainResult> ExplainAsync(CheckRequest request, CancellationToken ct = default)
+    {
+        EnsureProvider();
+        request.SnapToken = _latestSnapToken;
+        using var scope = _provider!.CreateScope();
+        var engine = scope.ServiceProvider.GetRequiredService<ICheckEngine>();
+        return await engine.Explain(request, ct);
+    }
+
+    /// <summary>
     /// Looks up entities against the latest seeded data snapshot.
     /// </summary>
     public async Task<LookupEntityPage> LookupEntityAsync(LookupEntityRequest request, CancellationToken ct = default)
