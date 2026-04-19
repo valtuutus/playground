@@ -14,9 +14,10 @@ public static class ResolutionGraphBuilder
 
     private static void Walk(CheckNode node, string? parentId, string id, List<object> elements)
     {
-        var label = string.IsNullOrEmpty(node.Detail)
-            ? node.Name
-            : $"{node.Name}\n{node.Detail}";
+        var entityPart = node.EntityType is not null ? $"\n{node.EntityType}:{node.EntityId}" : "";
+        var subjectPart = node.SubjectType is not null ? $"\n→ {node.SubjectType}:{node.SubjectId}" : "";
+        var detailPart = string.IsNullOrEmpty(node.Detail) ? "" : $"\n{node.Detail}";
+        var label = $"{node.Name}{entityPart}{subjectPart}{detailPart}";
 
         elements.Add(new
         {
