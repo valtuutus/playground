@@ -1,20 +1,57 @@
 @inject SchemaService SchemaService
 @inject IJSRuntime JS
 
-<div class="panel" style="height:100%;">
-    <div class="panel-header">
-        <span>Entity Graph</span>
+<div class="panel" style="height:100%; display:flex; flex-direction:column;">
+    <div class="panel-header" style="padding:0;">
+        <button class="tab @(_activeTab == Tab.EntityGraph ? "active" : "")"
+                style="border-radius:0; border-bottom:none;"
+                @onclick="() => _activeTab = Tab.EntityGraph">Entity Graph</button>
+        <button class="tab @(_activeTab == Tab.Resolution ? "active" : "")"
+                style="border-radius:0; border-bottom:none;"
+                @onclick="() => _activeTab = Tab.Resolution">Resolution Graph</button>
+        @if (_explainLabel is not null && _activeTab == Tab.Resolution)
+        {
+            <span style="margin-left:8px; font-size:11px; color:var(--text-lo);
+                         overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                @_explainLabel
+            </span>
+        }
     </div>
-    <div class="panel-body cyto-container" id="cyto-container"></div>
+    <div class="panel-body cyto-container" id="cyto-container"
+         style="@(_activeTab == Tab.EntityGraph ? "flex:1;" : "display:none;")"></div>
+    <div class="panel-body cyto-container" id="cyto-resolution"
+         style="@(_activeTab == Tab.Resolution ? "flex:1;" : "display:none;")"></div>
 </div>
 
 @code {
+    private enum Tab { EntityGraph, Resolution }
+    private Tab _activeTab = Tab.EntityGraph;
+    private string? _explainLabel;
+    private CheckExplainResult? _pendingExplain;
+
     public async Task Refresh()
     {
         var schema = SchemaService.Schema;
         if (schema is null) return;
-
         var json = GraphDataBuilder.BuildJson(schema);
         await JS.InvokeVoidAsync("renderCytoscape", "cyto-container", json);
+    }
+
+    public void ShowExplain(CheckExplainResult result, string label)
+    {
+        _explainLabel = label;
+        _activeTab = Tab.Resolution;
+        _pendingExplain = result;
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingExplain is not null)
+        {
+            var json = ResolutionGraphBuilder.BuildJson(_pendingExplain);
+            _pendingExplain = null;
+            await JS.InvokeVoidAsync("renderResolutionGraph", "cyto-resolution", json);
+        }
     }
 }
