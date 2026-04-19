@@ -343,3 +343,106 @@ window.initSchemaResize = () => {
         document.removeEventListener('mouseup', onUp);
     }
 };
+
+let _resCy = null;
+
+window.renderResolutionGraph = (containerId, elementsJson) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (_resCy) { _resCy.destroy(); _resCy = null; }
+
+    let elements;
+    try { elements = JSON.parse(elementsJson); }
+    catch (e) {
+        container.innerHTML = '<p style="color:#ef6878;font-size:12px;padding:12px">Graph error: ' + e.message + '</p>';
+        return;
+    }
+
+    _resCy = cytoscape({
+        container,
+        elements,
+        style: [
+            {
+                selector: 'node[result = "pass"]',
+                style: {
+                    'shape': 'round-rectangle',
+                    'background-color': '#0d2218',
+                    'border-width': 2,
+                    'border-color': '#a6e3a1',
+                    'label': 'data(label)',
+                    'color': '#a6e3a1',
+                    'font-family': 'JetBrains Mono, monospace',
+                    'font-size': 12,
+                    'font-weight': 600,
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '160px',
+                    'padding': 12,
+                    'width': 'label',
+                    'height': 'label',
+                    'min-width': 80,
+                    'min-height': 32,
+                }
+            },
+            {
+                selector: 'node[result = "fail"]',
+                style: {
+                    'shape': 'round-rectangle',
+                    'background-color': '#220d0d',
+                    'border-width': 2,
+                    'border-color': '#f38ba8',
+                    'label': 'data(label)',
+                    'color': '#f38ba8',
+                    'font-family': 'JetBrains Mono, monospace',
+                    'font-size': 12,
+                    'font-weight': 600,
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '160px',
+                    'padding': 12,
+                    'width': 'label',
+                    'height': 'label',
+                    'min-width': 80,
+                    'min-height': 32,
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'width': 1.5,
+                    'line-color': '#45475a',
+                    'target-arrow-color': '#45475a',
+                    'target-arrow-shape': 'triangle',
+                    'arrow-scale': 1,
+                    'curve-style': 'bezier',
+                }
+            },
+            {
+                selector: 'node:active',
+                style: { 'overlay-opacity': 0 }
+            }
+        ],
+        layout: {
+            name: 'elk',
+            animate: false,
+            elk: {
+                algorithm: 'layered',
+                'elk.direction': 'DOWN',
+                'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+                'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+                'elk.spacing.nodeNode': '40',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+                'elk.padding': '[top=24,left=24,bottom=24,right=24]',
+            },
+        },
+        userZoomingEnabled: true,
+        userPanningEnabled: true,
+        boxSelectionEnabled: false,
+        autoungrabify: false,
+    });
+
+    _resCy.fit(undefined, 32);
+};

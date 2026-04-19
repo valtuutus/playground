@@ -584,6 +584,19 @@ html, body {
 .assertion-run-btn:hover { color: var(--accent); }
 .assertion-del-btn:hover { color: var(--err); }
 
+.assertion-explain-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  line-height: 1;
+  color: var(--text-lo);
+}
+
+.assertion-explain-btn:hover { color: var(--cyan, #89dceb); }
+
 /* ══ Results ═══════════════════════════════════════════════════ */
 
 .result-allowed {
