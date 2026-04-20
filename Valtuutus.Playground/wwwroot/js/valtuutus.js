@@ -398,12 +398,80 @@ window.localStorage_set = (key, value) => localStorage.setItem(key, value);
 window.localStorage_get = (key) => localStorage.getItem(key);
 window.localStorage_remove = (key) => localStorage.removeItem(key);
 
-window.getElementRect = (selector) => {
-    const el = document.querySelector(selector);
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    return { top: r.top, left: r.left, width: r.width, height: r.height,
-             viewportWidth: window.innerWidth, viewportHeight: window.innerHeight };
+window.startTour = async (dotNetRef) => {
+    if (!window._driverFn) {
+        const { driver } = await import('https://cdn.jsdelivr.net/npm/driver.js@1/+esm');
+        window._driverFn = driver;
+    }
+    const driverFn = window._driverFn;
+
+    const d = driverFn({
+        animate: true,
+        showProgress: true,
+        progressText: '{{current}} / {{total}}',
+        nextBtnText: 'Next →',
+        prevBtnText: '← Back',
+        doneBtnText: 'Done',
+        allowClose: true,
+        overlayOpacity: 0.62,
+        popoverClass: 'vtt-tour-popover',
+        onDestroyed: () => {
+            dotNetRef.invokeMethodAsync('OnTourClosedAsync');
+        },
+        steps: [
+            {
+                popover: {
+                    title: 'Welcome to Valtuutus',
+                    description: 'Valtuutus is a relationship-based access control library. This playground lets you model a permission schema, seed it with data, and run queries to see how access is resolved.',
+                }
+            },
+            {
+                element: '.b2-schema',
+                popover: {
+                    title: 'Schema Editor',
+                    description: 'Write your authorization model here — entities, relations, and permissions. The entity graph on the right updates live as you type.',
+                    side: 'right', align: 'start',
+                }
+            },
+            {
+                element: '.b2-graph',
+                popover: {
+                    title: 'Entity Graph',
+                    description: 'Your schema visualised as a live graph. Entities are nodes; relations and permissions appear as edges. Use it to verify your model structure at a glance.',
+                    side: 'left', align: 'start',
+                }
+            },
+            {
+                element: '.b2-data',
+                popover: {
+                    title: 'Data Panel',
+                    description: "Add relation tuples here — the runtime data that binds subjects to resources. For example: 'user:alice is admin of resource:api'.",
+                    side: 'top', align: 'start',
+                }
+            },
+            {
+                element: '.b2-query',
+                popover: {
+                    title: 'Query Panel',
+                    description: "Run Check queries to ask 'can subject X perform action Y on resource Z?' Results appear inline with a pass/fail badge.",
+                    side: 'top', align: 'start',
+                }
+            },
+            {
+                element: '.b2-graph',
+                popover: {
+                    title: 'Explain Mode',
+                    description: 'Click Explain on any query to see exactly how the decision was reached — every permission node evaluated, with pass/fail highlighted on the resolution graph.',
+                    side: 'left', align: 'start',
+                },
+                onHighlightStarted: () => {
+                    dotNetRef.invokeMethodAsync('OnExplainStepAsync');
+                },
+            },
+        ]
+    });
+    d.drive();
+    window._vttDriver = d;
 };
 
 window.get_url_param = (param) => new URL(window.location.href).searchParams.get(param);
@@ -494,3 +562,8 @@ window.renderResolutionGraph = (containerId, elementsJson) => {
         },
     }).run();
 };
+
+// Preload driver.js so tour starts without a delay on first click
+import('https://cdn.jsdelivr.net/npm/driver.js@1/+esm').then(({ driver }) => {
+    window._driverFn = driver;
+});

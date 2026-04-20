@@ -53,7 +53,7 @@
     <div class="vtt-toast">Link copied!</div>
 }
 
-<TourOverlay @ref="_tour" OnSetupRequested="SetupForTourAsync" />
+<TourOverlay @ref="_tour" OnSetupRequested="SetupForTourAsync" OnExplainStepReached="ShowExplainForTourAsync" />
 
 @code {
     private string _schemaText = string.Empty;
@@ -139,14 +139,17 @@
         _activePresetName = PresetRegistry.Rbac.Name;
         StateHasChanged();
 
+    }
+
+    private async Task ShowExplainForTourAsync()
+    {
         if (!SchemaService.IsValid) return;
         var request = new CheckRequest(
             entityType: "resource", entityId: "api",
             permission: "read",
             subjectType: "user", subjectId: "alice");
         var explainResult = await SchemaService.ExplainAsync(request);
-        var label = "user:alice · read · resource:api";
-        _graph.ShowExplain(explainResult, label);
+        _graph.ShowExplain(explainResult, "user:alice · read · resource:api");
     }
 
     private async Task OnEditorReady()
