@@ -67,6 +67,8 @@
         _active = true;
         await RefreshRectAsync();
         StateHasChanged();
+        await JS.InvokeVoidAsync("eval",
+            "document.addEventListener('keydown',window._vttTourEsc=e=>{if(e.key==='Escape')document.querySelector('.tour-skip-btn')?.click();},{once:true});");
     }
 
     private async Task NextStep()
