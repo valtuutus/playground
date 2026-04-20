@@ -74,7 +74,6 @@
         if (_step == _steps.Length - 1) { await FinishTour(); return; }
         _step++;
         await RefreshRectAsync();
-        StateHasChanged();
     }
 
     private async Task PrevStep()
@@ -82,22 +81,18 @@
         if (_step == 0) return;
         _step--;
         await RefreshRectAsync();
-        StateHasChanged();
     }
 
-    private async Task SkipTour()
+    private async Task CloseTour()
     {
         await JS.InvokeVoidAsync("localStorage_set", "vtt-tour-seen", "1");
         _active = false;
         StateHasChanged();
     }
 
-    private async Task FinishTour()
-    {
-        await JS.InvokeVoidAsync("localStorage_set", "vtt-tour-seen", "1");
-        _active = false;
-        StateHasChanged();
-    }
+    private Task SkipTour() => CloseTour();
+
+    private Task FinishTour() => CloseTour();
 
     private async Task RefreshRectAsync()
     {
@@ -126,7 +121,7 @@
 
         // Flip above if tooltip would overflow bottom
         if (top + tooltipH > _targetRect.ViewportHeight - 16)
-            top = _targetRect.Top - tooltipH - margin;
+            top = Math.Max(8, _targetRect.Top - tooltipH - margin);
 
         // Clamp right edge
         if (left + tooltipW > _targetRect.ViewportWidth - 16)
