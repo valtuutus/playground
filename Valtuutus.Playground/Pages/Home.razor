@@ -125,10 +125,11 @@
 
     private async Task StartTourAsync()
     {
-        await JS.InvokeVoidAsync("localStorage_remove", "vtt-tour-seen");
+        try { await JS.InvokeVoidAsync("localStorage_remove", "vtt-tour-seen"); } catch { }
         await _tour.StartTourAsync();
     }
 
+    // Filled in by Task 3: pre-loads RBAC preset and fires Explain before tour shows.
     private Task SetupForTourAsync() => Task.CompletedTask;
 
     private async Task OnEditorReady()
