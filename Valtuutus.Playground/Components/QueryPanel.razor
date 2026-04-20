@@ -71,6 +71,7 @@
                         </span>
                         <div class="assertion-card-actions">
                             <button class="assertion-run-btn" title="Run" @onclick="() => RunAssertion(idx)">&#9654;</button>
+                            <button class="assertion-explain-btn" title="Explain" @onclick="() => ExplainAssertion(idx)">&#128270;</button>
                             <button class="assertion-del-btn" title="Remove" @onclick="() => RemoveAssertion(idx)">&#10005;</button>
                         </div>
                     </div>
@@ -247,6 +248,7 @@
     // Assertions parameters
     [Parameter] public List<Assertion> Assertions { get; set; } = new();
     [Parameter] public EventCallback OnAssertionsChanged { get; set; }
+    [Parameter] public EventCallback<ExplainRequestedArgs> OnExplainRequested { get; set; }
 
     // Assertions result state (transient, not persisted)
     private List<bool?> _assertionResults = new();
@@ -413,6 +415,27 @@
             // leave null on error
         }
         StateHasChanged();
+    }
+
+    private async Task ExplainAssertion(int index)
+    {
+        if (!SchemaService.IsValid || index < 0 || index >= Assertions.Count) return;
+        var a = Assertions[index];
+        try
+        {
+            var result = await SchemaService.ExplainAsync(new CheckRequest(
+                entityType: a.EntityType,
+                entityId: a.EntityId,
+                permission: a.Permission,
+                subjectType: a.SubjectType,
+                subjectId: a.SubjectId));
+            var label = $"{a.SubjectType}:{a.SubjectId} · {a.Permission} · {a.EntityType}:{a.EntityId}";
+            await OnExplainRequested.InvokeAsync(new ExplainRequestedArgs(result, label));
+        }
+        catch
+        {
+            // silently ignore — schema may be invalid
+        }
     }
 
     private async Task RunAllAssertions()

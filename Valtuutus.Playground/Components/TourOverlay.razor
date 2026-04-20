@@ -1,0 +1,34 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@code {
+    private DotNetObjectReference<TourOverlay>? _objRef;
+
+    [Parameter] public EventCallback OnSetupRequested { get; set; }
+    [Parameter] public EventCallback OnExplainStepReached { get; set; }
+
+    public async Task StartTourAsync()
+    {
+        await OnSetupRequested.InvokeAsync();
+        _objRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("startTour", _objRef);
+    }
+
+    [JSInvokable]
+    public async Task OnExplainStepAsync()
+    {
+        await OnExplainStepReached.InvokeAsync();
+    }
+
+    [JSInvokable]
+    public async Task OnTourClosedAsync()
+    {
+        await JS.InvokeVoidAsync("localStorage_set", "vtt-tour-seen", "1");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _objRef?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

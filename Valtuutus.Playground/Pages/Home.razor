@@ -16,12 +16,14 @@
         <div class="app-header-fill"></div>
         <a href="https://github.com/valtuutus/valtuutus" target="_blank" class="vtt-btn-ghost">GitHub</a>
         <button class="vtt-btn-ghost" @onclick="ToggleTheme">@(_isLightTheme ? "Dark" : "Light")</button>
+        <button class="vtt-btn-ghost" @onclick="StartTourAsync">Tour</button>
         <button class="vtt-btn" @onclick="ShareAsync">Share</button>
     </header>
 
     <div class="app-layout-b2">
         <div class="b2-schema">
-            <SchemaEditor @ref="_schemaEditor"
+            <SchemaEditor @key="_isLightTheme"
+                          @ref="_schemaEditor"
                           ActivePresetName="@_activePresetName"
                           OnSchemaChanged="OnSchemaChanged"
                           OnPresetLoaded="OnPresetLoaded"
@@ -40,7 +42,8 @@
         <div class="b2-query">
             <QueryPanel @ref="_queryPanel"
                         Assertions="_assertions"
-                        OnAssertionsChanged="OnAssertionsChanged" />
+                        OnAssertionsChanged="OnAssertionsChanged"
+                        OnExplainRequested="OnExplainRequested" />
         </div>
     </div>
 </div>
@@ -49,6 +52,8 @@
 {
     <div class="vtt-toast">Link copied!</div>
 }
+
+<TourOverlay @ref="_tour" OnSetupRequested="SetupForTourAsync" OnExplainStepReached="ShowExplainForTourAsync" />
 
 @code {
     private string _schemaText = string.Empty;
@@ -60,6 +65,7 @@
     private QueryPanel _queryPanel = default!;
 
     private EntityGraph _graph = default!;
+    private TourOverlay _tour = default!;
     private DataPanel _dataPanel = default!;
     private SchemaEditor _schemaEditor = default!;
 
@@ -111,7 +117,39 @@
     {
         if (!firstRender) return;
         await JS.InvokeVoidAsync("initSchemaResize");
-        await _graph.Refresh();
+        _graph.Refresh();
+        var seen = await JS.InvokeAsync<string?>("localStorage_get", "vtt-tour-seen");
+        if (seen is null)
+            await _tour.StartTourAsync();
+    }
+
+    private async Task StartTourAsync()
+    {
+        try { await JS.InvokeVoidAsync("localStorage_remove", "vtt-tour-seen"); } catch { }
+        await _tour.StartTourAsync();
+    }
+
+    private async Task SetupForTourAsync()
+    {
+        await LoadPreset(PresetRegistry.Rbac);
+        await _schemaEditor.SetValueAsync(_schemaText);
+        _graph.Refresh();
+        _assertions = new List<Assertion>(PresetRegistry.Rbac.SeedAssertions ?? Array.Empty<Assertion>());
+        await _dataPanel.LoadPresetData(PresetRegistry.Rbac.SeedTuples, PresetRegistry.Rbac.SeedAttributes);
+        _activePresetName = PresetRegistry.Rbac.Name;
+        StateHasChanged();
+
+    }
+
+    private async Task ShowExplainForTourAsync()
+    {
+        if (!SchemaService.IsValid) return;
+        var request = new CheckRequest(
+            entityType: "resource", entityId: "api",
+            permission: "read",
+            subjectType: "user", subjectId: "alice");
+        var explainResult = await SchemaService.ExplainAsync(request);
+        _graph.ShowExplain(explainResult, "user:alice · read · resource:api");
     }
 
     private async Task OnEditorReady()
@@ -126,7 +164,7 @@
     {
         if (string.IsNullOrEmpty(_schemaText)) return;
         await _schemaEditor.SetValueAsync(_schemaText);
-        await _graph.Refresh();
+        _graph.Refresh();
     }
 
     private async Task OnSchemaChanged(string schema)
@@ -136,7 +174,7 @@
         if (SchemaService.IsValid)
         {
             await SchemaService.ResetDataAsync(_tuples, _attributes);
-            await _graph.Refresh();
+            _graph.Refresh();
         }
         _queryPanel?.ClearAssertionResults();
         await Persist();
@@ -151,13 +189,18 @@
         // _tuples and _attributes are updated in-place by LoadPresetData
         if (SchemaService.IsValid)
             await SchemaService.ResetDataAsync(_tuples, _attributes);
-        await _graph.Refresh();
+        _graph.Refresh();
         await Persist();
     }
 
     private async Task OnAssertionsChanged()
     {
         await Persist();
+    }
+
+    private void OnExplainRequested(ExplainRequestedArgs args)
+    {
+        _graph.ShowExplain(args.Result, args.Label);
     }
 
     private async Task OnDataChanged()
@@ -186,6 +229,9 @@
         _isLightTheme = !_isLightTheme;
         var cls = _isLightTheme ? "add" : "remove";
         await JS.InvokeVoidAsync("eval", $"document.documentElement.classList.{cls}('light')");
+        await JS.InvokeVoidAsync("updateGraphTheme");
+        await JS.InvokeVoidAsync("destroyEntityGraph");
+        _graph.Refresh();
     }
 
     private async Task ShareAsync()
