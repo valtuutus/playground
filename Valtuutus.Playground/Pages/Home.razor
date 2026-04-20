@@ -129,8 +129,25 @@
         await _tour.StartTourAsync();
     }
 
-    // Filled in by Task 3: pre-loads RBAC preset and fires Explain before tour shows.
-    private Task SetupForTourAsync() => Task.CompletedTask;
+    private async Task SetupForTourAsync()
+    {
+        await LoadPreset(PresetRegistry.Rbac);
+        await _schemaEditor.SetValueAsync(_schemaText);
+        _graph.Refresh();
+        _assertions = new List<Assertion>(PresetRegistry.Rbac.SeedAssertions ?? Array.Empty<Assertion>());
+        await _dataPanel.LoadPresetData(PresetRegistry.Rbac.SeedTuples, PresetRegistry.Rbac.SeedAttributes);
+        _activePresetName = PresetRegistry.Rbac.Name;
+        StateHasChanged();
+
+        if (!SchemaService.IsValid) return;
+        var request = new CheckRequest(
+            entityType: "resource", entityId: "api",
+            permission: "read",
+            subjectType: "user", subjectId: "alice");
+        var explainResult = await SchemaService.ExplainAsync(request);
+        var label = "user:alice · read · resource:api";
+        _graph.ShowExplain(explainResult, label);
+    }
 
     private async Task OnEditorReady()
     {
