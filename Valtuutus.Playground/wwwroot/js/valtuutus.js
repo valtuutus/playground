@@ -398,6 +398,14 @@ window.localStorage_set = (key, value) => localStorage.setItem(key, value);
 window.localStorage_get = (key) => localStorage.getItem(key);
 window.localStorage_remove = (key) => localStorage.removeItem(key);
 
+window.getElementRect = (selector) => {
+    const el = document.querySelector(selector);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { top: r.top, left: r.left, width: r.width, height: r.height,
+             viewportWidth: window.innerWidth, viewportHeight: window.innerHeight };
+};
+
 window.get_url_param = (param) => new URL(window.location.href).searchParams.get(param);
 window.set_url = (url) => history.replaceState({}, '', url);
 window.get_current_url = () => window.location.href;

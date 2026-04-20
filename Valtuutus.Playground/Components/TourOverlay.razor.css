@@ -1,0 +1,126 @@
+.tour-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.62);
+    z-index: 1000;
+}
+
+.tour-spotlight {
+    position: fixed;
+    z-index: 1001;
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
+    pointer-events: none;
+}
+
+.tour-tooltip {
+    position: fixed;
+    z-index: 1002;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-base);
+    border-radius: calc(var(--radius) + 1px);
+    padding: 14px 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tour-tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tour-step-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    font-family: var(--font-mono);
+}
+
+.tour-skip-btn {
+    background: none;
+    border: none;
+    color: var(--text-lo);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    font-family: var(--font-ui);
+}
+
+.tour-skip-btn:hover {
+    color: var(--text-mid);
+}
+
+.tour-tooltip-body {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-hi);
+    margin: 0;
+}
+
+.tour-tooltip-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tour-back-btn {
+    background: transparent;
+    border: 1px solid var(--border-base);
+    color: var(--text-mid);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-ui);
+}
+
+.tour-back-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.tour-back-btn:hover:not(:disabled) {
+    border-color: var(--border-strong);
+    color: var(--text-hi);
+}
+
+.tour-next-btn {
+    background: var(--accent);
+    border: none;
+    color: #101525;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-ui);
+}
+
+.tour-next-btn:hover {
+    background: var(--accent-hi);
+}
+
+.tour-dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.tour-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    display: inline-block;
+    transition: background 0.15s, transform 0.15s;
+}
+
+.tour-dot.active {
+    background: var(--accent);
+    transform: scale(1.35);
+}
