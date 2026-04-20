@@ -21,7 +21,8 @@
 
     <div class="app-layout-b2">
         <div class="b2-schema">
-            <SchemaEditor @ref="_schemaEditor"
+            <SchemaEditor @key="_isLightTheme"
+                          @ref="_schemaEditor"
                           ActivePresetName="@_activePresetName"
                           OnSchemaChanged="OnSchemaChanged"
                           OnPresetLoaded="OnPresetLoaded"
@@ -192,6 +193,9 @@
         _isLightTheme = !_isLightTheme;
         var cls = _isLightTheme ? "add" : "remove";
         await JS.InvokeVoidAsync("eval", $"document.documentElement.classList.{cls}('light')");
+        await JS.InvokeVoidAsync("updateGraphTheme");
+        await JS.InvokeVoidAsync("destroyEntityGraph");
+        _graph.Refresh();
     }
 
     private async Task ShareAsync()

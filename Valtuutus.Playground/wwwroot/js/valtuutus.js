@@ -86,13 +86,12 @@ window.init_vtt = () => {
         base: 'vs-dark',
         inherit: true,
         rules: [
-            // Structural keywords — each maps to graph node/edge colors
-            { token: 'kw.entity',      foreground: 'f5ae38', fontStyle: 'bold' },   // amber — entity nodes
-            { token: 'kw.relation',    foreground: 'b49aee', fontStyle: 'bold' },   // purple — relation edges
-            { token: 'kw.permission',  foreground: 'e87cff', fontStyle: 'bold' },   // pink — permission nodes
-            { token: 'kw.attribute',   foreground: '40d0d8', fontStyle: 'bold' },   // teal — attribute nodes
-            { token: 'kw.fn',          foreground: '7ec88a', fontStyle: 'bold' },   // green
-            { token: 'kw.relation-ref',foreground: 'b49aee' },                      // purple, dimmer (same family as relation)
+            { token: 'kw.entity',      foreground: 'f5ae38', fontStyle: 'bold' },
+            { token: 'kw.relation',    foreground: 'b49aee', fontStyle: 'bold' },
+            { token: 'kw.permission',  foreground: 'e87cff', fontStyle: 'bold' },
+            { token: 'kw.attribute',   foreground: '40d0d8', fontStyle: 'bold' },
+            { token: 'kw.fn',          foreground: '7ec88a', fontStyle: 'bold' },
+            { token: 'kw.relation-ref',foreground: 'b49aee' },
             { token: 'type',           foreground: '40d0d8' },
             { token: 'operator',       foreground: '8aa0c0' },
             { token: 'identifier',     foreground: 'c5d5e8' },
@@ -129,177 +128,270 @@ window.init_vtt = () => {
         }
     });
 
-    monaco.editor.setTheme('vtt-dark');
+    monaco.editor.defineTheme('vtt-light', {
+        base: 'vs',
+        inherit: true,
+        rules: [
+            { token: 'kw.entity',      foreground: 'b07800', fontStyle: 'bold' },
+            { token: 'kw.relation',    foreground: '5040b0', fontStyle: 'bold' },
+            { token: 'kw.permission',  foreground: '8020b0', fontStyle: 'bold' },
+            { token: 'kw.attribute',   foreground: '007888', fontStyle: 'bold' },
+            { token: 'kw.fn',          foreground: '1a7040', fontStyle: 'bold' },
+            { token: 'kw.relation-ref',foreground: '6050c0' },
+            { token: 'type',           foreground: '007888' },
+            { token: 'operator',       foreground: '3a5070' },
+            { token: 'identifier',     foreground: '1a3050' },
+            { token: 'annotation',     foreground: '8020b0' },
+            { token: 'string',         foreground: '1a7040' },
+            { token: 'number',         foreground: '5040b0' },
+            { token: 'number.float',   foreground: '5040b0' },
+            { token: 'comment',        foreground: '7090b0', fontStyle: 'italic' },
+            { token: 'invalid',        foreground: 'b02020' },
+            { token: 'delimiter.curly',       foreground: '506080' },
+            { token: 'delimiter.parenthesis', foreground: '506080' },
+        ],
+        colors: {
+            'editor.background':                  '#f0f4ff',
+            'editor.foreground':                  '#1a3050',
+            'editor.lineHighlightBackground':     '#e4eaf8',
+            'editor.selectionBackground':         '#b0bedd60',
+            'editor.inactiveSelectionBackground': '#ccd4e840',
+            'editorLineNumber.foreground':        '#7090b0',
+            'editorLineNumber.activeForeground':  '#b07800',
+            'editorCursor.foreground':            '#b07800',
+            'editorIndentGuide.background':       '#ccd4e8',
+            'editorIndentGuide.activeBackground': '#b0bedd',
+            'editorBracketMatch.background':      '#b0bedd40',
+            'editorBracketMatch.border':          '#b0787080',
+            'editorWidget.background':            '#e4eaf8',
+            'editorWidget.border':                '#b0bedd',
+            'editorSuggestWidget.background':     '#e4eaf8',
+            'editorSuggestWidget.border':         '#b0bedd',
+            'editorSuggestWidget.selectedBackground': '#ccd4e8',
+            'scrollbarSlider.background':         '#b0bedd40',
+            'scrollbarSlider.hoverBackground':    '#8fa4c860',
+            'scrollbarSlider.activeBackground':   '#b0787040',
+        }
+    });
+
+    const isLight = document.documentElement.classList.contains('light');
+    monaco.editor.setTheme(isLight ? 'vtt-light' : 'vtt-dark');
+};
+
+window.setEditorTheme = (isLight) => {
+    monaco.editor.setTheme(isLight ? 'vtt-light' : 'vtt-dark');
+};
+
+function cytoscapeStyle(isLight) {
+    return isLight ? [
+        { selector: 'node[nodeType = "entity"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#f0f4ff',
+            'border-width': 2, 'border-color': '#b07800',
+            'label': 'data(label)', 'color': '#1a3050',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 13, 'font-weight': 600,
+            'text-valign': 'center', 'text-halign': 'center', 'padding': 16,
+            'width': 'label', 'height': 'label', 'min-width': 100, 'min-height': 40,
+        }},
+        { selector: 'node[nodeType = "attribute"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#e4eaf8',
+            'border-width': 1, 'border-color': '#007888',
+            'label': 'data(label)', 'color': '#007888',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 11,
+            'text-valign': 'center', 'text-halign': 'center', 'padding': 10,
+            'width': 'label', 'height': 'label', 'min-width': 80, 'min-height': 28,
+        }},
+        { selector: 'edge[edgeType = "relation"]', style: {
+            'width': 1.5, 'line-color': '#5040b0',
+            'target-arrow-color': '#5040b0', 'target-arrow-shape': 'triangle', 'arrow-scale': 1.2,
+            'curve-style': 'bezier', 'label': 'data(label)', 'font-size': 10,
+            'font-family': 'IBM Plex Sans, sans-serif', 'color': '#3a5070',
+            'text-wrap': 'wrap', 'text-max-width': '120px',
+            'text-background-color': '#f0f4ff', 'text-background-opacity': 1,
+            'text-background-padding': 4, 'text-border-opacity': 0, 'edge-text-rotation': 'none',
+        }},
+        { selector: 'edge[edgeType = "attribute"]', style: {
+            'width': 1, 'line-color': '#b0bedd', 'target-arrow-color': '#b0bedd',
+            'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
+            'line-style': 'dashed', 'line-dash-pattern': [5, 3],
+        }},
+        { selector: 'node[nodeType = "permission"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#f0eeff',
+            'border-width': 1, 'border-color': '#8020b0', 'border-style': 'dashed',
+            'label': 'data(label)', 'color': '#8020b0',
+            'font-family': 'IBM Plex Sans, sans-serif', 'font-size': 10, 'font-style': 'italic',
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': '180px', 'padding': 8,
+            'width': 'label', 'height': 'label', 'min-width': 60, 'min-height': 20,
+        }},
+        { selector: 'edge[edgeType = "permission"]', style: {
+            'width': 1, 'line-color': '#ccc0e8', 'target-arrow-color': '#ccc0e8',
+            'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
+            'curve-style': 'bezier', 'line-style': 'dashed', 'line-dash-pattern': [3, 4],
+        }},
+        { selector: 'node:active', style: { 'overlay-opacity': 0 } },
+    ] : [
+        { selector: 'node[nodeType = "entity"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#18203a',
+            'border-width': 2, 'border-color': '#f5ae38',
+            'label': 'data(label)', 'color': '#eaf2ff',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 13, 'font-weight': 600,
+            'text-valign': 'center', 'text-halign': 'center', 'padding': 16,
+            'width': 'label', 'height': 'label', 'min-width': 100, 'min-height': 40,
+        }},
+        { selector: 'node[nodeType = "attribute"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#1a2640',
+            'border-width': 1, 'border-color': '#40d0d8',
+            'label': 'data(label)', 'color': '#40d0d8',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 11,
+            'text-valign': 'center', 'text-halign': 'center', 'padding': 10,
+            'width': 'label', 'height': 'label', 'min-width': 80, 'min-height': 28,
+        }},
+        { selector: 'edge[edgeType = "relation"]', style: {
+            'width': 1.5, 'line-color': '#b49aee',
+            'target-arrow-color': '#b49aee', 'target-arrow-shape': 'triangle', 'arrow-scale': 1.2,
+            'curve-style': 'bezier', 'label': 'data(label)', 'font-size': 10,
+            'font-family': 'IBM Plex Sans, sans-serif', 'color': '#8aa0c0',
+            'text-wrap': 'wrap', 'text-max-width': '120px',
+            'text-background-color': '#101525', 'text-background-opacity': 1,
+            'text-background-padding': 4, 'text-border-opacity': 0, 'edge-text-rotation': 'none',
+        }},
+        { selector: 'edge[edgeType = "attribute"]', style: {
+            'width': 1, 'line-color': '#28365a', 'target-arrow-color': '#28365a',
+            'target-arrow-shape': 'triangle', 'curve-style': 'bezier',
+            'line-style': 'dashed', 'line-dash-pattern': [5, 3],
+        }},
+        { selector: 'node[nodeType = "permission"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#140e22',
+            'border-width': 1, 'border-color': '#9b6dff', 'border-style': 'dashed',
+            'label': 'data(label)', 'color': '#9b6dff',
+            'font-family': 'IBM Plex Sans, sans-serif', 'font-size': 10, 'font-style': 'italic',
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': '180px', 'padding': 8,
+            'width': 'label', 'height': 'label', 'min-width': 60, 'min-height': 20,
+        }},
+        { selector: 'edge[edgeType = "permission"]', style: {
+            'width': 1, 'line-color': '#2e1f4a', 'target-arrow-color': '#2e1f4a',
+            'target-arrow-shape': 'triangle', 'arrow-scale': 0.8,
+            'curve-style': 'bezier', 'line-style': 'dashed', 'line-dash-pattern': [3, 4],
+        }},
+        { selector: 'node:active', style: { 'overlay-opacity': 0 } },
+    ];
+}
+
+function resolutionStyle(isLight) {
+    return isLight ? [
+        { selector: 'node[result = "pass"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#f0fff8',
+            'border-width': 2, 'border-color': '#1a8040',
+            'label': 'data(label)', 'color': '#1a8040',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 12, 'font-weight': 600,
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': '160px', 'padding': 12,
+            'width': 'label', 'height': 'label', 'min-width': 80, 'min-height': 32,
+        }},
+        { selector: 'node[result = "fail"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#fff5f5',
+            'border-width': 2, 'border-color': '#b02020',
+            'label': 'data(label)', 'color': '#b02020',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 12, 'font-weight': 600,
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': '160px', 'padding': 12,
+            'width': 'label', 'height': 'label', 'min-width': 80, 'min-height': 32,
+        }},
+        { selector: 'edge', style: {
+            'width': 1.5, 'line-color': '#7090b0',
+            'target-arrow-color': '#7090b0', 'target-arrow-shape': 'triangle',
+            'arrow-scale': 1, 'curve-style': 'bezier',
+        }},
+        { selector: 'node:active', style: { 'overlay-opacity': 0 } },
+    ] : [
+        { selector: 'node[result = "pass"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#0d2218',
+            'border-width': 2, 'border-color': '#a6e3a1',
+            'label': 'data(label)', 'color': '#a6e3a1',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 12, 'font-weight': 600,
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': '160px', 'padding': 12,
+            'width': 'label', 'height': 'label', 'min-width': 80, 'min-height': 32,
+        }},
+        { selector: 'node[result = "fail"]', style: {
+            'shape': 'round-rectangle', 'background-color': '#220d0d',
+            'border-width': 2, 'border-color': '#f38ba8',
+            'label': 'data(label)', 'color': '#f38ba8',
+            'font-family': 'JetBrains Mono, monospace', 'font-size': 12, 'font-weight': 600,
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': '160px', 'padding': 12,
+            'width': 'label', 'height': 'label', 'min-width': 80, 'min-height': 32,
+        }},
+        { selector: 'edge', style: {
+            'width': 1.5, 'line-color': '#45475a',
+            'target-arrow-color': '#45475a', 'target-arrow-shape': 'triangle',
+            'arrow-scale': 1, 'curve-style': 'bezier',
+        }},
+        { selector: 'node:active', style: { 'overlay-opacity': 0 } },
+    ];
+}
+
+window.updateGraphTheme = () => {
+    const isLight = document.documentElement.classList.contains('light');
+    if (_resCy) _resCy.style(resolutionStyle(isLight));
+};
+
+window.destroyEntityGraph = () => {
+    if (_cy) { _cy.destroy(); _cy = null; }
 };
 
 let _cy = null;
+let _cyVer = 0;
 
 window.renderCytoscape = (containerId, elementsJson) => {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    if (_cy) { _cy.destroy(); _cy = null; }
-
     let elements;
     try { elements = JSON.parse(elementsJson); }
     catch (e) { container.innerHTML = '<p style="color:#ef6878;font-size:12px;padding:12px">Graph error: ' + e.message + '</p>'; return; }
 
-    console.log('[vtt] dagre registered:', typeof cytoscape.prototype.layout !== 'undefined');
+    const ver = ++_cyVer;
 
-    _cy = cytoscape({
-        container,
-        elements,
-        style: [
-            // Entity nodes
-            {
-                selector: 'node[nodeType = "entity"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'background-color': '#18203a',
-                    'border-width': 2,
-                    'border-color': '#f5ae38',
-                    'label': 'data(label)',
-                    'color': '#eaf2ff',
-                    'font-family': 'JetBrains Mono, monospace',
-                    'font-size': 13,
-                    'font-weight': 600,
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'padding': 16,
-                    'width': 'label',
-                    'height': 'label',
-                    'min-width': 100,
-                    'min-height': 40,
-                }
-            },
-            // Attribute nodes
-            {
-                selector: 'node[nodeType = "attribute"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'background-color': '#1a2640',
-                    'border-width': 1,
-                    'border-color': '#40d0d8',
-                    'label': 'data(label)',
-                    'color': '#40d0d8',
-                    'font-family': 'JetBrains Mono, monospace',
-                    'font-size': 11,
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'padding': 10,
-                    'width': 'label',
-                    'height': 'label',
-                    'min-width': 80,
-                    'min-height': 28,
-                }
-            },
-            // Relation edges
-            {
-                selector: 'edge[edgeType = "relation"]',
-                style: {
-                    'width': 1.5,
-                    'line-color': '#b49aee',
-                    'target-arrow-color': '#b49aee',
-                    'target-arrow-shape': 'triangle',
-                    'arrow-scale': 1.2,
-                    'curve-style': 'bezier',
-                    'label': 'data(label)',
-                    'font-size': 10,
-                    'font-family': 'IBM Plex Sans, sans-serif',
-                    'color': '#8aa0c0',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '120px',
-                    'text-background-color': '#101525',
-                    'text-background-opacity': 1,
-                    'text-background-padding': 4,
-                    'text-border-opacity': 0,
-                    'edge-text-rotation': 'none',
-                }
-            },
-            // Attribute dashed edges
-            {
-                selector: 'edge[edgeType = "attribute"]',
-                style: {
-                    'width': 1,
-                    'line-color': '#28365a',
-                    'target-arrow-color': '#28365a',
-                    'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier',
-                    'line-style': 'dashed',
-                    'line-dash-pattern': [5, 3],
-                }
-            },
-            // Permission summary nodes
-            {
-                selector: 'node[nodeType = "permission"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'background-color': '#140e22',
-                    'border-width': 1,
-                    'border-color': '#9b6dff',
-                    'border-style': 'dashed',
-                    'label': 'data(label)',
-                    'color': '#9b6dff',
-                    'font-family': 'IBM Plex Sans, sans-serif',
-                    'font-size': 10,
-                    'font-style': 'italic',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '180px',
-                    'padding': 8,
-                    'width': 'label',
-                    'height': 'label',
-                    'min-width': 60,
-                    'min-height': 20,
-                }
-            },
-            // Permission edges
-            {
-                selector: 'edge[edgeType = "permission"]',
-                style: {
-                    'width': 1,
-                    'line-color': '#2e1f4a',
-                    'target-arrow-color': '#2e1f4a',
-                    'target-arrow-shape': 'triangle',
-                    'arrow-scale': 0.8,
-                    'curve-style': 'bezier',
-                    'line-style': 'dashed',
-                    'line-dash-pattern': [3, 4],
-                }
-            },
-            // Hover state
-            {
-                selector: 'node:active',
-                style: { 'overlay-opacity': 0 }
-            }
-        ],
-        layout: {
-            name: 'elk',
-            animate: false,
-            elk: {
-                algorithm: 'layered',
-                'elk.direction': 'RIGHT',
-                'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-                'elk.layered.crossingMinimization.greedySwitchType': 'TWO_SIDED',
-                'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
-                'elk.layered.thoroughness': '15',
-                'elk.spacing.nodeNode': '60',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '120',
-                'elk.padding': '[top=24,left=24,bottom=24,right=24]',
-            },
-        },
-        userZoomingEnabled: true,
-        userPanningEnabled: true,
-        boxSelectionEnabled: false,
-        autoungrabify: false,
+    // Update elements in-place to avoid destroying _cy while a previous async ELK
+    // layout is still running (its Promise callback would crash on the destroyed core).
+    if (_cy) {
+        _cy.elements().remove();
+        _cy.add(elements);
+    } else {
+        _cy = cytoscape({
+            container,
+            elements,
+            style: cytoscapeStyle(document.documentElement.classList.contains('light')),
+            userZoomingEnabled: true,
+            userPanningEnabled: true,
+            boxSelectionEnabled: false,
+            autoungrabify: false,
+        });
+    }
+
+    _cy.one('layoutstop', () => {
+        if (_cyVer !== ver) return;
+        _cy.fit(undefined, 32);
+        if (_cy.zoom() < 0.25) { _cy.zoom(0.25); _cy.center(); }
     });
 
-    _cy.fit(undefined, 32);
-    if (_cy.zoom() < 0.25) {
-        _cy.zoom(0.25);
-        _cy.center();
-    }
+    _cy.layout({
+        name: 'elk',
+        animate: false,
+        elk: {
+            algorithm: 'layered',
+            'elk.direction': 'RIGHT',
+            'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+            'elk.layered.crossingMinimization.greedySwitchType': 'TWO_SIDED',
+            'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+            'elk.layered.thoroughness': '15',
+            'elk.spacing.nodeNode': '60',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+            'elk.padding': '[top=24,left=24,bottom=24,right=24]',
+        },
+    }).run();
 };
 
 window.localStorage_set = (key, value) => localStorage.setItem(key, value);
@@ -345,12 +437,11 @@ window.initSchemaResize = () => {
 };
 
 let _resCy = null;
+let _resCyVer = 0;
 
 window.renderResolutionGraph = (containerId, elementsJson) => {
     const container = document.getElementById(containerId);
     if (!container) return;
-
-    if (_resCy) { _resCy.destroy(); _resCy = null; }
 
     let elements;
     try { elements = JSON.parse(elementsJson); }
@@ -359,90 +450,39 @@ window.renderResolutionGraph = (containerId, elementsJson) => {
         return;
     }
 
-    _resCy = cytoscape({
-        container,
-        elements,
-        style: [
-            {
-                selector: 'node[result = "pass"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'background-color': '#0d2218',
-                    'border-width': 2,
-                    'border-color': '#a6e3a1',
-                    'label': 'data(label)',
-                    'color': '#a6e3a1',
-                    'font-family': 'JetBrains Mono, monospace',
-                    'font-size': 12,
-                    'font-weight': 600,
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '160px',
-                    'padding': 12,
-                    'width': 'label',
-                    'height': 'label',
-                    'min-width': 80,
-                    'min-height': 32,
-                }
-            },
-            {
-                selector: 'node[result = "fail"]',
-                style: {
-                    'shape': 'round-rectangle',
-                    'background-color': '#220d0d',
-                    'border-width': 2,
-                    'border-color': '#f38ba8',
-                    'label': 'data(label)',
-                    'color': '#f38ba8',
-                    'font-family': 'JetBrains Mono, monospace',
-                    'font-size': 12,
-                    'font-weight': 600,
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '160px',
-                    'padding': 12,
-                    'width': 'label',
-                    'height': 'label',
-                    'min-width': 80,
-                    'min-height': 32,
-                }
-            },
-            {
-                selector: 'edge',
-                style: {
-                    'width': 1.5,
-                    'line-color': '#45475a',
-                    'target-arrow-color': '#45475a',
-                    'target-arrow-shape': 'triangle',
-                    'arrow-scale': 1,
-                    'curve-style': 'bezier',
-                }
-            },
-            {
-                selector: 'node:active',
-                style: { 'overlay-opacity': 0 }
-            }
-        ],
-        layout: {
-            name: 'elk',
-            animate: false,
-            elk: {
-                algorithm: 'layered',
-                'elk.direction': 'DOWN',
-                'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-                'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
-                'elk.spacing.nodeNode': '40',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '80',
-                'elk.padding': '[top=24,left=24,bottom=24,right=24]',
-            },
-        },
-        userZoomingEnabled: true,
-        userPanningEnabled: true,
-        boxSelectionEnabled: false,
-        autoungrabify: false,
+    const ver = ++_resCyVer;
+
+    if (_resCy) {
+        _resCy.elements().remove();
+        _resCy.add(elements);
+    } else {
+        _resCy = cytoscape({
+            container,
+            elements,
+            style: resolutionStyle(document.documentElement.classList.contains('light')),
+            userZoomingEnabled: true,
+            userPanningEnabled: true,
+            boxSelectionEnabled: false,
+            autoungrabify: false,
+        });
+    }
+
+    _resCy.one('layoutstop', () => {
+        if (_resCyVer !== ver) return;
+        _resCy.fit(undefined, 32);
     });
 
-    _resCy.fit(undefined, 32);
+    _resCy.layout({
+        name: 'elk',
+        animate: false,
+        elk: {
+            algorithm: 'layered',
+            'elk.direction': 'DOWN',
+            'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+            'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+            'elk.spacing.nodeNode': '40',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+            'elk.padding': '[top=24,left=24,bottom=24,right=24]',
+        },
+    }).run();
 };
