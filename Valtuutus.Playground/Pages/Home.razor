@@ -16,6 +16,7 @@
         <div class="app-header-fill"></div>
         <a href="https://github.com/valtuutus/valtuutus" target="_blank" class="vtt-btn-ghost">GitHub</a>
         <button class="vtt-btn-ghost" @onclick="ToggleTheme">@(_isLightTheme ? "Dark" : "Light")</button>
+        <button class="vtt-btn-ghost" @onclick="StartTourAsync">Tour</button>
         <button class="vtt-btn" @onclick="ShareAsync">Share</button>
     </header>
 
@@ -52,6 +53,8 @@
     <div class="vtt-toast">Link copied!</div>
 }
 
+<TourOverlay @ref="_tour" OnSetupRequested="SetupForTourAsync" />
+
 @code {
     private string _schemaText = string.Empty;
     private string _activePresetName = string.Empty;
@@ -62,6 +65,7 @@
     private QueryPanel _queryPanel = default!;
 
     private EntityGraph _graph = default!;
+    private TourOverlay _tour = default!;
     private DataPanel _dataPanel = default!;
     private SchemaEditor _schemaEditor = default!;
 
@@ -114,7 +118,18 @@
         if (!firstRender) return;
         await JS.InvokeVoidAsync("initSchemaResize");
         _graph.Refresh();
+        var seen = await JS.InvokeAsync<string?>("localStorage_get", "vtt-tour-seen");
+        if (seen is null)
+            await _tour.StartTourAsync();
     }
+
+    private async Task StartTourAsync()
+    {
+        await JS.InvokeVoidAsync("localStorage_remove", "vtt-tour-seen");
+        await _tour.StartTourAsync();
+    }
+
+    private Task SetupForTourAsync() => Task.CompletedTask;
 
     private async Task OnEditorReady()
     {
