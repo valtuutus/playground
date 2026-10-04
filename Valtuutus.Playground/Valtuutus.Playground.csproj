@@ -9,11 +9,11 @@
 
     <ItemGroup>
         <PackageReference Include="BlazorMonaco" Version="3.5.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.9" PrivateAssets="all" />
-        <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="10.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="10.0.12" />
         <PackageReference Include="Sysinfocus.AspNetCore.Components" Version="0.0.3.5" />
-        <PackageReference Include="Valtuutus.Data.InMemory" Version="1.0.0" />
+        <PackageReference Include="Valtuutus.Data.InMemory" Version="1.4.0" />
     </ItemGroup>
 
     <ItemGroup>
