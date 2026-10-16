@@ -99,13 +99,12 @@ public sealed class SchemaService : IDisposable
     /// <summary>
     /// Evaluates a permission check against the latest seeded data snapshot.
     /// </summary>
-    public async Task<bool> CheckAsync(CheckRequest request, CancellationToken ct = default)
+    public async Task<CheckResult> CheckAsync(CheckRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ICheckEngine>();
-        return await engine.Check(request, ct);
+        return await engine.Check(request with { SnapToken = _latestSnapToken }, ct);
     }
 
     /// <summary>
@@ -114,10 +113,9 @@ public sealed class SchemaService : IDisposable
     public async Task<CheckExplainResult> ExplainAsync(CheckRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ICheckEngine>();
-        return await engine.Explain(request, ct);
+        return await engine.Explain(request with { SnapToken = _latestSnapToken }, ct);
     }
 
     /// <summary>
@@ -126,22 +124,20 @@ public sealed class SchemaService : IDisposable
     public async Task<LookupEntityPage> LookupEntityAsync(LookupEntityRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ILookupEntityEngine>();
-        return await engine.LookupEntity(request, ct);
+        return await engine.LookupEntity(request with { SnapToken = _latestSnapToken }, ct);
     }
 
     /// <summary>
     /// Looks up subjects against the latest seeded data snapshot.
     /// </summary>
-    public async Task<HashSet<string>> LookupSubjectAsync(LookupSubjectRequest request, CancellationToken ct = default)
+    public async Task<LookupSubjectResult> LookupSubjectAsync(LookupSubjectRequest request, CancellationToken ct = default)
     {
         EnsureProvider();
-        request.SnapToken = _latestSnapToken;
         using var scope = _provider!.CreateScope();
         var engine = scope.ServiceProvider.GetRequiredService<ILookupSubjectEngine>();
-        return await engine.Lookup(request, ct);
+        return await engine.Lookup(request with { SnapToken = _latestSnapToken }, ct);
     }
 
     private void EnsureProvider()

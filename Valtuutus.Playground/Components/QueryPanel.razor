@@ -39,6 +39,10 @@
                         </div>
                         <span class="assertion-progress-label">@passCount / @Assertions.Count passed</span>
                     </div>
+                    @if (_assertionSnapToken is not null)
+                    {
+                        <div style="font-size:11px;color:var(--text-lo);margin-bottom:6px;">read at snapshot <code>@_assertionSnapToken</code></div>
+                    }
                 }
                 else
                 {
@@ -163,6 +167,10 @@
                             }
                         </div>
                     }
+                    @if (_leSnapToken is not null)
+                    {
+                        <div style="font-size:11px;color:var(--text-lo);margin-top:4px;">read at snapshot <code>@_leSnapToken</code></div>
+                    }
                 </div>
             }
             @if (_leError is not null)
@@ -213,6 +221,10 @@
                             }
                         </div>
                     }
+                    @if (_lsSnapToken is not null)
+                    {
+                        <div style="font-size:11px;color:var(--text-lo);margin-top:4px;">read at snapshot <code>@_lsSnapToken</code></div>
+                    }
                 </div>
             }
             @if (_lsError is not null)
@@ -235,6 +247,7 @@
     private string _leSubjectId = string.Empty;
     private string _lePermission = string.Empty;
     private IReadOnlyList<string>? _leResults;
+    private string? _leSnapToken;
     private string? _leError;
 
     // LookupSubject state
@@ -243,6 +256,7 @@
     private string _lsPermission = string.Empty;
     private string _lsSubjectType = string.Empty;
     private HashSet<string>? _lsResults;
+    private string? _lsSnapToken;
     private string? _lsError;
 
     // Assertions parameters
@@ -252,6 +266,7 @@
 
     // Assertions result state (transient, not persisted)
     private List<bool?> _assertionResults = new();
+    private string? _assertionSnapToken;
 
     // Assertions add-form state
     private string _newASubjectType = string.Empty;
@@ -321,14 +336,17 @@
     {
         _activeTab = tab;
         _leResults = null;
+        _leSnapToken = null;
         _leError = null;
         _lsResults = null;
+        _lsSnapToken = null;
         _lsError = null;
     }
 
     private async Task RunLookupEntity()
     {
         _leResults = null;
+        _leSnapToken = null;
         _leError = null;
 
         if (!SchemaService.IsValid) { _leError = "Schema is not valid."; return; }
@@ -348,6 +366,7 @@
                 subjectId: _leSubjectId);
             var page = await SchemaService.LookupEntityAsync(request);
             _leResults = page.EntityIds;
+            _leSnapToken = page.SnapToken?.Value;
         }
         catch (Exception ex)
         {
@@ -358,6 +377,7 @@
     private async Task RunLookupSubject()
     {
         _lsResults = null;
+        _lsSnapToken = null;
         _lsError = null;
 
         if (!SchemaService.IsValid) { _lsError = "Schema is not valid."; return; }
@@ -375,7 +395,9 @@
                 permission: _lsPermission,
                 subjectType: _lsSubjectType,
                 entityId: _lsEntityId);
-            _lsResults = await SchemaService.LookupSubjectAsync(request);
+            var result = await SchemaService.LookupSubjectAsync(request);
+            _lsResults = result.SubjectIds;
+            _lsSnapToken = result.SnapToken?.Value;
         }
         catch (Exception ex)
         {
@@ -389,6 +411,7 @@
     public void ClearAssertionResults()
     {
         _assertionResults.Clear();
+        _assertionSnapToken = null;
         StateHasChanged();
     }
 
@@ -408,7 +431,8 @@
                 permission: a.Permission,
                 subjectType: a.SubjectType,
                 subjectId: a.SubjectId));
-            _assertionResults[index] = result;
+            _assertionResults[index] = result.Allowed;
+            _assertionSnapToken = result.SnapToken?.Value;
         }
         catch
         {
@@ -448,12 +472,14 @@
             var a = Assertions[i];
             try
             {
-                results[i] = await SchemaService.CheckAsync(new CheckRequest(
+                var result = await SchemaService.CheckAsync(new CheckRequest(
                     entityType: a.EntityType,
                     entityId: a.EntityId,
                     permission: a.Permission,
                     subjectType: a.SubjectType,
                     subjectId: a.SubjectId));
+                results[i] = result.Allowed;
+                _assertionSnapToken = result.SnapToken?.Value;
             }
             catch
             {
