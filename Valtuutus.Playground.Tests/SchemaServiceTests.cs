@@ -47,7 +47,7 @@ public sealed class SchemaServiceTests : IAsyncDisposable
             subjectType: subjectType,
             subjectId:   subjectId));
 
-        Assert.Equal(expected, result);
+        Assert.Equal(expected, result.Allowed);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class SchemaServiceTests : IAsyncDisposable
                 subjectType: a.SubjectType,
                 subjectId:   a.SubjectId));
 
-            Assert.Equal(a.Expected, result);
+            Assert.Equal(a.Expected, result.Allowed);
         }
     }
 
@@ -116,9 +116,24 @@ public sealed class SchemaServiceTests : IAsyncDisposable
             subjectType: "user",
             entityId:    "linux"));
 
-        Assert.Contains("torvalds", subjects);
-        Assert.Contains("alice",    subjects);
-        Assert.DoesNotContain("bob", subjects);
+        Assert.Contains("torvalds", subjects.SubjectIds);
+        Assert.Contains("alice",    subjects.SubjectIds);
+        Assert.DoesNotContain("bob", subjects.SubjectIds);
+    }
+
+    [Fact]
+    public async Task Queries_report_the_seeded_snapshot_they_read_at()
+    {
+        await SeedGitHub();
+
+        var check = await _svc.CheckAsync(new CheckRequest(
+            entityType: "repository", entityId: "linux", permission: "push",
+            subjectType: "user", subjectId: "torvalds"));
+        var subjects = await _svc.LookupSubjectAsync(new LookupSubjectRequest(
+            entityType: "repository", permission: "push", subjectType: "user", entityId: "linux"));
+
+        Assert.NotNull(check.SnapToken);
+        Assert.Equal(check.SnapToken, subjects.SnapToken);
     }
 
     // -------------------------------------------------------------------------
