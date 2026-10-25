@@ -13,7 +13,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
         <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="10.0.12" />
         <PackageReference Include="Sysinfocus.AspNetCore.Components" Version="0.0.3.5" />
-        <PackageReference Include="Valtuutus.Data.InMemory" Version="2.1.0" />
+        <PackageReference Include="Valtuutus.Data.InMemory" Version="2.2.0" />
     </ItemGroup>
 
     <ItemGroup>
